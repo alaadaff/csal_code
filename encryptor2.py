@@ -72,27 +72,17 @@ def process_data_encryptor():
     #process data received from server and extract set of public keys
     
     #generate encryptor params and forward to client
-    sessionId = random.randint(1, 100)
-    suiteEnc = generate_suite()
-
-    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'sid', [sessionId, 'Bob', 'facebook.com'])
-    #simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'user', ['Bob'])
-    #simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'relyingParty', ['facebook.com'])
-
-    public, private, pk_bytes, sk_bytes = generate_key()
-    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'publicKeys', [pk_bytes])
-    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'secretKeys', [sk_bytes])
-
-    symmK = generate_symmetric()
-    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'symmetricKeys', [symmK])
-
-    encap, sender = suiteEnc.create_sender_context(public)
-    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'encapKeys', [encap])
+    
+    
+    Ckem, Cdem = encrypt_csal()
+    sessID = server2.fetch_data('encryptor2.db', 'encryptor2', 'sid')
+    pk_payload = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
+    sign, certA = generateSignature(pickle.dumps([sessID[0], pk_payload[0]]))
 
     #certA = server2.generate_random_certificate()
     #sign = generateSignature(certA)
 
-    encryptor_payload =  [sessionId, public, private, symmK]
+    encryptor_payload = [sessID[0], pk_payload[0], Ckem, Cdem, sign, certA]
     encryptor_payload_serialize = pickle.dumps(encryptor_payload)
 
     return encryptor_payload_serialize
@@ -115,7 +105,7 @@ def process_data_client():
         message = pickle.loads(byte_message)
         #function to process received message 
 
-        print(message)
+        print(message[0])
 
     # Print the received message in the receiver's terminal
     #print(f"Receiver (received): {message}")
@@ -190,7 +180,7 @@ def generate_symmetric(): #base64 encoded 32-byte key
     key = Fernet.generate_key()
     f = Fernet(key) #this can be called anytime encryption or decryption is required once the key exists 
 
-    return [key, f]
+    return key
 
 # we'll need to generate a suite for both sealing and opening data encrypted using hpke 
 def generate_suite():
@@ -217,12 +207,15 @@ def generate_key():
 
 
 def encrypt_csal():
+
     serial = getSerial()
     enc_suite = generate_suite()
     fetch1 = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
     public = enc_suite.kem.deserialize_public_key(fetch1[0])
     encap, sender = enc_suite.create_sender_context(public)
     helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)
+    fetch3 = server2.fetch_data('encryptor2.db', 'encryptor2', 'encapKeys')
+
 
     fetch2 = server2.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
     token = Fernet(fetch2[0])
@@ -233,6 +226,7 @@ def encrypt_csal():
     #print(C_dem)
     #print("token type:", base64.urlsafe_b64decode(C_dem)[0])
     C_kem = sender.seal(fetch2[0])
+    sender.seal(serial)
     
     return C_dem, C_kem
 
@@ -289,7 +283,7 @@ def generateSignature(blob):
     
     #returns signature, the digital certificate in pem format and the corresponding public key 
     #we can choose to include or not include the public key as it's supposedly already included in the PEM cert and can be extracted using openssl 
-    return signature  
+    return signature, pem  
 
 
 #verifies digital signature 
@@ -308,16 +302,16 @@ def sign_verify(pk, signature, message):
 
 
 if __name__ == "__main__":
-    #create_db_and_table('encryptor.db')
-    create_db_and_table('encryptor2.db')
+   
+    #create_db_and_table('encryptor2.db')
     #insert_row_encryptor('encryptor2.db', 'encryptor2')
     
-    encrypt_csal()
+    #encrypt_csal()
 
     #generate_symmetric()
 
     #process_data_client()
-    #process_data_encryptor()
+    process_data_encryptor()
     """
     helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)
     suite = generate_suite()

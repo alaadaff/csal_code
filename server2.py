@@ -167,9 +167,9 @@ def server_params():
     #PK = fetch_data('server.db', 'users', 'publicKeys') #pulled from db
     #tKEM = fetch_data('server.db', 'users', 'ciphertexts') #pulled from db
     keyParams = [{"key_params": "public-key", "alg": -7}]
-
+    publicKeys = fetch_data('server.db', 'users', 'publicKeys')
     #server_payload = [challenge, cookie, PK, tKEM, keyParams]
-    server_payload = [challenge, cookie, keyParams]
+    server_payload = [challenge, cookie, keyParams, [publicKeys]]
 
     return server_payload
 
@@ -242,6 +242,7 @@ def start_server():
             if data:
                 #print(f"Received from client: {data.decode()}")
                 print(data)
+                print(len(data))
                 break
                 #break
 
@@ -263,8 +264,9 @@ def main():
    
    
     
-    
-    start_server()
+    for i in range (0, 3):
+        start_server()
+        
   
     #sqlite3.connect('server.db').execute("INSERT INTO server (publicKeys) VALUES (?)", ('\x04e\xed\xa5\xa1%w\xc2\xba\xe8)C\x7f\xe38p\x1a',)).connection.commit()
 

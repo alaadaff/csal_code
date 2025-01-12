@@ -18,6 +18,7 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import serialization
 from random import randbytes
+import os
 #import encryptor2
 
 def serialize_public_key(public_key):
@@ -133,3 +134,22 @@ def insert_single_value(db_name, table_name, column_name, value):
     finally:
         # Close the database connection
         conn.close()
+
+
+def delete_database(db_name):
+    """
+    Deletes the SQLite database file.
+    
+    Args:
+        db_name (str): The name of the SQLite database file to be deleted.
+    """
+    try:
+        # Check if the database file exists
+        if os.path.exists(db_name):
+            os.remove(db_name)  # Delete the database file
+            print(f"Database '{db_name}' has been deleted.")
+        else:
+            print(f"Database '{db_name}' does not exist.")
+    
+    except Exception as e:
+        print(f"Error occurred while deleting the database: {e}")        

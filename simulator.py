@@ -100,7 +100,7 @@ def csal_login():
     run_in_terminal('python server2.py')
     time.sleep(2)
     run_in_terminal('python client2.py')
-
+    
 
 
 if __name__ == '__main__':

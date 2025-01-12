@@ -126,7 +126,9 @@ def start_client():
    
 
 if __name__ == '__main__':
-    start_client()
+
+    for i in range(0, 3):
+        start_client()
     #simulator.run_in_terminal('python3 encryptor2.py')
     
     #serv_params = server2.server_params()
