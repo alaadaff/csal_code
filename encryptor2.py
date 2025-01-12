@@ -65,22 +65,27 @@ def create_db_and_table(db_name):
     conn.close()
 
 
-def prcoess_data_encryptor():
+def process_data_encryptor():
 
     #process data received from server and extract set of public keys
     
     #generate encryptor params and forward to client
     sessionId = random.randint(1, 100)
-    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'sid', [sessionId])
+    suiteEnc = generate_suite()
 
-    public, private = generate_key()
-    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'publicKeys', [public])
-    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'secretKeys', [private])
+    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'sid', [sessionId, 'Bob', 'facebook.com'])
+    #simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'user', ['Bob'])
+    #simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'relyingParty', ['facebook.com'])
+
+    public, private, pk_bytes, sk_bytes = generate_key()
+    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'publicKeys', [pk_bytes])
+    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'secretKeys', [sk_bytes])
 
     symmK = generate_symmetric()
     simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'symmetricKeys', [symmK])
 
-
+    encap, sender = suiteEnc.create_sender_context(public)
+    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'encapKeys', [encap])
 
     #certA = server2.generate_random_certificate()
     #sign = generateSignature(certA)
@@ -116,7 +121,7 @@ def process_data_client():
     # Process the message and create a response - response has to be in string format
     #response = f"Processed: {pickle.loads(message)}"
     #response = f"Processed: {message}"
-    response = prcoess_data_encryptor()
+    response = process_data_encryptor()
 
     # Print the response in receiver's terminal
     #print(f"Receiver (response): {response}")
@@ -160,7 +165,7 @@ def generate_key():
     sk = key_pair.private_key
     sk_serialize = sk.to_private_bytes()
 
-    return pk_serialize, sk_serialize
+    return pk, sk, pk_serialize, sk_serialize
 
 
 def encrypt_csal():
@@ -247,8 +252,8 @@ def sign_verify(pk, signature, message):
 if __name__ == "__main__":
     #create_db_and_table('encryptor.db')
     create_db_and_table('encryptor2.db')
-    process_data_client()
-
+    #process_data_client()
+    process_data_encryptor()
     """
 
     suite = generate_suite()
