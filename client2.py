@@ -95,12 +95,15 @@ def start_client():
     serv_bytes = pickle.dumps(serv_params)
 
     # Set up the client
+    
+    i = 0
+
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect(('localhost', 12345))  # Connect to the server
-
+    
     try:
-        while True:
-            
+        
+        while True and i<4:
 
             # Receive data from the server
             data = client_socket.recv(1024)
@@ -113,10 +116,12 @@ def start_client():
                 time.sleep(1)
                 client_socket.sendall(message)
                 print("Login completed")
-                break
-            # Send data to the server
-            #message = input("Enter message to send to server: ")
+                #break
+            i+=1
             
+                # Send data to the server
+                #message = input("Enter message to send to server: ")
+                
 
     except KeyboardInterrupt:
         print("\nClient shutting down.")
@@ -127,8 +132,8 @@ def start_client():
 
 if __name__ == '__main__':
 
-    for i in range(0, 3):
-        start_client()
+    start_client()
+    
     #simulator.run_in_terminal('python3 encryptor2.py')
     
     #serv_params = server2.server_params()

@@ -214,17 +214,19 @@ def start_server():
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(('localhost', 12345))  # Binding to localhost on port 12345
-    server_socket.listen(1)  # Listen for one client connection
+    server_socket.listen(4)  # Listen for one client connection
 
     print("Server is listening for incoming connections...")
 
+    
     # Accept incoming client connection
     client_socket, client_address = server_socket.accept()
     print(f"Connection established with {client_address}")
-    cond = "connect"
+    
 
     try:
         while True:
+    
             # Receive data from the client
             #data = client_socket.recv(1024)
             #if not data:
@@ -243,9 +245,11 @@ def start_server():
                 #print(f"Received from client: {data.decode()}")
                 print(data)
                 print(len(data))
-                break
                 #break
-
+                #break
+            
+            
+            
             #else:
             #    break
             
@@ -264,9 +268,8 @@ def main():
    
    
     
-    for i in range (0, 3):
-        start_server()
-        
+    start_server()
+
   
     #sqlite3.connect('server.db').execute("INSERT INTO server (publicKeys) VALUES (?)", ('\x04e\xed\xa5\xa1%w\xc2\xba\xe8)C\x7f\xe38p\x1a',)).connection.commit()
 
