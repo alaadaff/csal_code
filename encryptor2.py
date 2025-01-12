@@ -33,6 +33,8 @@ import random
 import helpers
 import time
 import server2
+import uuid
+import base64
 
 
 sessionId = random.randint(1, 10)
@@ -46,8 +48,8 @@ def create_db_and_table(db_name):
 
     # Create a table if it doesn't exist
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS encryptor2 (
-        sid INTEGER PRIMARY KEY,
+    CREATE TABLE IF NOT EXISTS encryptor2 (           
+        sid TEXT PRIMARY KEY,
         user TEXT,
         relyingParty TEXT,
         publicKeys BLOB,
@@ -132,6 +134,48 @@ def process_data_client():
     sys.stdout.flush()  # Ensure the response is flushed
 
 
+def insert_row_encryptor(db_name, table_name):
+    """
+    Insert a row into the specified SQLite table with generated sid and data.
+    
+    Args:
+        db_name (str): The name of the SQLite database file.
+        table_name (str): The name of the table into which data is being inserted.
+    """
+    try:
+        # Generate a unique sid (primary key) using UUID
+        sid = str(uuid.uuid4())  # Generate a unique identifier for the sid
+        user = "Bob"
+        relyingParty = "facebook.com"
+        suiteEnc = generate_suite()
+        public, private, pk_bytes, sk_bytes = generate_key()
+        symmK = generate_symmetric()
+        #encap, sender = suiteEnc.create_sender_context(public)
+        
+        # Connect to the SQLite database
+        conn = sqlite3.connect(db_name)
+        cursor = conn.cursor()
+
+        # Prepare the SQL query with placeholders for variables
+        sql = f"INSERT INTO {table_name} (sid, user, relyingParty, publicKeys, secretKeys, symmetricKeys) VALUES (?, ?, ?, ?, ?, ?)"
+        
+        # Execute the query, passing the values as a tuple
+        cursor.execute(sql, (sid, user, relyingParty, pk_bytes, sk_bytes, symmK))
+        
+        # Commit the transaction
+        conn.commit()
+        
+        print(f"Row inserted into '{table_name}' with sid = {sid}.")
+        
+    except sqlite3.IntegrityError as e:
+        # Handle unique constraint violation or other integrity errors
+        print(f"IntegrityError: {e}")
+    except sqlite3.Error as e:
+        # Catch any other SQLite errors
+        print(f"SQLite Error: {e}")
+    finally:
+        # Close the connection to the database
+        conn.close()
 
 def getSerial():
 
@@ -142,13 +186,15 @@ def getSerial():
 
 
 def generate_symmetric(): #base64 encoded 32-byte key
-    
+
     key = Fernet.generate_key()
-    #f = Fernet(key) #this can be called anytime encryption or decryption is required once the key exists 
-    return key
+    f = Fernet(key) #this can be called anytime encryption or decryption is required once the key exists 
+
+    return [key, f]
 
 # we'll need to generate a suite for both sealing and opening data encrypted using hpke 
 def generate_suite():
+
     suite = CipherSuite.new(
     KEMId.DHKEM_P256_HKDF_SHA256, KDFId.HKDF_SHA256, AEADId.AES128_GCM
     )
@@ -162,35 +208,47 @@ def generate_key():
     key_pair = suite.kem.derive_key_pair(randbytes(32))
     pk = key_pair.public_key
     pk_serialize = pk.to_public_bytes()
+    #pk_serialize = helpers.serialize_public_key(pk)
     sk = key_pair.private_key
     sk_serialize = sk.to_private_bytes()
+    #sk_serialize = helpers.serialize_public_key(pk)
 
     return pk, sk, pk_serialize, sk_serialize
 
 
 def encrypt_csal():
-    enc_suite = generate_suite()
-    pubK, secK = generate_key()
-    symmK = generate_symmetric()
     serial = getSerial()
-    token = Fernet(symmK).encrypt(serial)
-    encap, sender = enc_suite.create_sender_context(pubK)
-    ctxt = sender.seal(token)
+    enc_suite = generate_suite()
+    fetch1 = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
+    public = enc_suite.kem.deserialize_public_key(fetch1[0])
+    encap, sender = enc_suite.create_sender_context(public)
+    helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)
 
-    #serialize before inserting into db
-    pubK_serialize = pickle.dumps(pubK)
-    secK_serialize = pickle.dumps(secK)
-    symmK_serialize = pickle.dumps(symmK)
-    encap_serialize = pickle.dumps(encap) 
+    fetch2 = server2.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
+    token = Fernet(fetch2[0])
+    
+    C_dem = token.encrypt(serial)
+   
 
-    #insert into db
-    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'publicKeys', [pubK_serialize])
-    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'secretKeys', [secK_serialize])
-    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'symmetricKeys', [symmK_serialize])
-    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'encapKeys', [encap_serialize])
+    #print(C_dem)
+    #print("token type:", base64.urlsafe_b64decode(C_dem)[0])
+    C_kem = sender.seal(fetch2[0])
+    
+    return C_dem, C_kem
 
-    #return ctxt, encap, puk, sck
-    return ctxt 
+
+def decrypt_csal(ciphertext):
+
+    dec_suite = generate_suite()
+    fetch3 = server2.fetch_data('encryptor2.db', 'encryptor2', 'secretKeys')
+    sk = dec_suite.kem.deserialize_private_key(fetch3[0])
+    recipient = dec_suite.create_recipient_context(encap, sk)
+
+    ptxt1 = recipient.open(C_kem)
+    ptxt2 = token.decrypt(C_dem)
+
+    print(ptxt2)
+
 
 
 def decrypt_csal(ctxt):
@@ -252,10 +310,16 @@ def sign_verify(pk, signature, message):
 if __name__ == "__main__":
     #create_db_and_table('encryptor.db')
     create_db_and_table('encryptor2.db')
-    #process_data_client()
-    process_data_encryptor()
-    """
+    #insert_row_encryptor('encryptor2.db', 'encryptor2')
+    
+    encrypt_csal()
 
+    #generate_symmetric()
+
+    #process_data_client()
+    #process_data_encryptor()
+    """
+    helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)
     suite = generate_suite()
     public, private = generate_key()
 
