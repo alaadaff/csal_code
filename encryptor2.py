@@ -32,6 +32,7 @@ import simulator
 import random  
 import helpers
 import time
+import server2
 
 
 sessionId = random.randint(1, 10)
@@ -64,9 +65,36 @@ def create_db_and_table(db_name):
     conn.close()
 
 
+def prcoess_data_encryptor():
+
+    #process data received from server and extract set of public keys
+    
+    #generate encryptor params and forward to client
+    sessionId = random.randint(1, 100)
+    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'sid', [sessionId])
+
+    public, private = generate_key()
+    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'publicKeys', [public])
+    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'secretKeys', [private])
+
+    symmK = generate_symmetric()
+    simulator.insert_into_single_column ('encryptor2.db', 'encryptor2', 'symmetricKeys', [symmK])
+
+
+
+    #certA = server2.generate_random_certificate()
+    #sign = generateSignature(certA)
+
+    encryptor_payload =  [sessionId, public, private, symmK]
+    encryptor_payload_serialize = pickle.dumps(encryptor_payload)
+
+    return encryptor_payload_serialize
+
+  
+
 
 # Function to process data sent from client via pipes 
-def process_data():
+def process_data_client():
 
    # Read the message from stdin (in bytes)
     byte_message = sys.stdin.buffer.read()  # Read bytes from stdin #this is somehow string
@@ -76,21 +104,26 @@ def process_data():
     #print(type(byte_message))
     # Decode the byte message to string for processing
     #message = byte_message.decode('utf-8')
-    message = byte_message
-    
+    if byte_message:
+        message = pickle.loads(byte_message)
+        #function to process received message 
+
+        print(message)
+
     # Print the received message in the receiver's terminal
-    print(f"Receiver (received): {message}")
+    #print(f"Receiver (received): {message}")
     
-    # Process the message and create a response
+    # Process the message and create a response - response has to be in string format
     #response = f"Processed: {pickle.loads(message)}"
     #response = f"Processed: {message}"
+    response = prcoess_data_encryptor()
 
     # Print the response in receiver's terminal
-    print(f"Receiver (response): {message}")
+    #print(f"Receiver (response): {response}")
     
     # Convert the response to bytes and send it back to sender's stdout
     #sys.stdout.write(response.encode('utf-8') + b'\n')  # Write response as bytes
-    sys.stdout.write(message)  # Write response as bytes
+    sys.stdout.buffer.write(response)  # Write response as bytes
     sys.stdout.flush()  # Ensure the response is flushed
 
 
@@ -123,11 +156,11 @@ def generate_key():
     suite = generate_suite()
     key_pair = suite.kem.derive_key_pair(randbytes(32))
     pk = key_pair.public_key
-    #pk_serialize = pk.to_public_bytes()
+    pk_serialize = pk.to_public_bytes()
     sk = key_pair.private_key
-    #sk_serialize = sk.to_private_bytes()
+    sk_serialize = sk.to_private_bytes()
 
-    return pk, sk 
+    return pk_serialize, sk_serialize
 
 
 def encrypt_csal():
@@ -154,6 +187,9 @@ def encrypt_csal():
     #return ctxt, encap, puk, sck
     return ctxt 
 
+
+def decrypt_csal(ctxt):
+    dec_suite = generate_suite()
 
 
 
@@ -190,7 +226,7 @@ def generateSignature(blob):
     
     #returns signature, the digital certificate in pem format and the corresponding public key 
     #we can choose to include or not include the public key as it's supposedly already included in the PEM cert and can be extracted using openssl 
-    return [signature, pem, public_key] 
+    return signature  
 
 
 #verifies digital signature 
@@ -210,8 +246,8 @@ def sign_verify(pk, signature, message):
 
 if __name__ == "__main__":
     #create_db_and_table('encryptor.db')
-    #create_db_and_table('encryptor2.db')
-    process_data()
+    create_db_and_table('encryptor2.db')
+    process_data_client()
 
     """
 

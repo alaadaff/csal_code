@@ -156,6 +156,7 @@ def generate_random_certificate():
 
     # Return the PEM-encoded certificate and private key
     #To return private key, return private_key_pem.decode('utf-8'), cert_pem.decode('utf-8'), signature
+    #return cert_pem.decode('utf-8'), private_key
     return cert_pem.decode('utf-8'), private_key
 
 

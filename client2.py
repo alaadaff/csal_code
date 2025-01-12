@@ -8,7 +8,11 @@ import server2
 import pickle
 
 
-def forward_to_subprocess(message):
+def forward_to_subprocess():
+
+    serv_params = server2.server_params()
+    serv_bytes = pickle.dumps(serv_params)
+
     # Start the subprocess (encryptor2.py)
     process = subprocess.Popen(
         ['python3', 'encryptor2.py'],
@@ -23,18 +27,20 @@ def forward_to_subprocess(message):
     #print(f"Sending: {message.decode('utf-8')}")  # Optionally print the message in a human-readable form
 
     # Use communicate() to send and receive data
-    stdout, stderr = process.communicate(input=message)  # Automatically flushes stdin and reads stdout
+    stdout, stderr = process.communicate(input=serv_bytes)  # Automatically flushes stdin and reads stdout
 
     # Print the received response (stdout)
     if stdout:
-        resp = ("My stdout", stdout)
-        print(f"Received: {stdout.decode('utf-8')}")
+        #print(f"Received: {stdout.decode('utf-8')}")
+        print("Received from encryptor")
+        print(stdout)
+        print(type(stdout))
         #print(f"Received: {stdout}")
     # Print any error messages (if any)
     if stderr:
         print(f"Error: {stderr.decode('utf-8')}")
 
-    return resp
+    return stdout
 
 """
 
@@ -102,7 +108,7 @@ def start_client():
                 #print(f"Received from server: {data.decode()}")
                 #print("Received from server: ", data)
                 #message = "lalaland"
-                message = forward_to_subprocess(data)
+                message = forward_to_subprocess()
                 
                 time.sleep(1)
                 client_socket.sendall(message)
@@ -120,16 +126,17 @@ def start_client():
    
 
 if __name__ == '__main__':
-    #start_client()
+    start_client()
     #simulator.run_in_terminal('python3 encryptor2.py')
     
-    serv_params = server2.server_params()
-    serv_bytes = pickle.dumps(serv_params)
-    
+    #serv_params = server2.server_params()
+    #serv_bytes = pickle.dumps(serv_params)
+    #print(serv_bytes)
     #message = b'Hello from sender.py!'
     
-    res = forward_to_subprocess(serv_bytes)
-    print(res)
+    #forward_to_subprocess()
+    #print(res)
+    #print(type(res))
     
     #print(resp)
 
