@@ -27,13 +27,14 @@ def forward_to_subprocess(message):
 
     # Print the received response (stdout)
     if stdout:
+        resp = ("My stdout", stdout)
         print(f"Received: {stdout.decode('utf-8')}")
         #print(f"Received: {stdout}")
     # Print any error messages (if any)
     if stderr:
         print(f"Error: {stderr.decode('utf-8')}")
 
-
+    return resp
 
 """
 
@@ -83,6 +84,10 @@ def forward_to_subprocess():
 
 
 def start_client():
+
+    serv_params = server2.server_params()
+    serv_bytes = pickle.dumps(serv_params)
+
     # Set up the client
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect(('localhost', 12345))  # Connect to the server
@@ -98,6 +103,7 @@ def start_client():
                 #print("Received from server: ", data)
                 #message = "lalaland"
                 message = forward_to_subprocess(data)
+                
                 time.sleep(1)
                 client_socket.sendall(message)
                 print("Login completed")
@@ -121,8 +127,10 @@ if __name__ == '__main__':
     serv_bytes = pickle.dumps(serv_params)
     
     #message = b'Hello from sender.py!'
-    forward_to_subprocess(serv_bytes)
-
+    
+    res = forward_to_subprocess(serv_bytes)
+    print(res)
+    
     #print(resp)
 
     #print(serv_bytes)

@@ -82,14 +82,15 @@ def process_data():
     print(f"Receiver (received): {message}")
     
     # Process the message and create a response
-    response = f"Processed: {pickle.loads(message)}"
-    
+    #response = f"Processed: {pickle.loads(message)}"
+    #response = f"Processed: {message}"
+
     # Print the response in receiver's terminal
-    print(f"Receiver (response): {response}")
+    print(f"Receiver (response): {message}")
     
     # Convert the response to bytes and send it back to sender's stdout
     #sys.stdout.write(response.encode('utf-8') + b'\n')  # Write response as bytes
-    sys.stdout.write(response)  # Write response as bytes
+    sys.stdout.write(message)  # Write response as bytes
     sys.stdout.flush()  # Ensure the response is flushed
 
 
