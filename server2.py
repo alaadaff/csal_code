@@ -47,9 +47,10 @@ def create_db_and_table(db_name):
     CREATE TABLE IF NOT EXISTS users (
         uid INTEGER PRIMARY KEY,
         user TEXT,
-        sid INTEGER,
+        sid TEXT,
         publicKeys BLOB,
-        ciphertexts BLOB
+        CKEMs BLOB,
+        CDEMs BLOB           
 
     )
     ''')
@@ -88,6 +89,47 @@ def fetch_data(db_name, table_name, column_name):
 
     return column_data
 
+def insert_row_server(db_name, table_name, pickled_data):
+    """
+    Insert a row into the specified SQLite table with generated sid and data.
+    
+    Args:
+        db_name (str): The name of the SQLite database file.
+        table_name (str): The name of the table into which data is being inserted.
+    """
+    userid = random.randint(1, 9999)
+    data = pickle.loads(pickled_data)
+    user = "Alice"
+    sid = data[0]
+    publicK = data[1]
+    ckem = data[2]
+    cdem = data[3]
+    try:
+        
+        # Connect to the SQLite database
+        conn = sqlite3.connect(db_name)
+        cursor = conn.cursor()
+
+        # Prepare the SQL query with placeholders for variables
+        sql = f"INSERT INTO {table_name} (uid, user, sid, publicKeys, CKEMs, CDEMs) VALUES (?, ?, ?, ?, ?, ?)"
+        
+        # Execute the query, passing the values as a tuple
+        cursor.execute(sql, (userid, user, sid, publicK, ckem, cdem))
+        
+        # Commit the transaction
+        conn.commit()
+        
+        #print(f"Row inserted into '{table_name}' with sid = {sid}.")
+        
+    except sqlite3.IntegrityError as e:
+        # Handle unique constraint violation or other integrity errors
+        print(f"IntegrityError: {e}")
+    except sqlite3.Error as e:
+        # Catch any other SQLite errors
+        print(f"SQLite Error: {e}")
+    finally:
+        # Close the connection to the database
+        conn.close()
 
 
 #function to create random RP certs and signature 
@@ -168,10 +210,19 @@ def server_params():
     #tKEM = fetch_data('server.db', 'users', 'ciphertexts') #pulled from db
     keyParams = [{"key_params": "public-key", "alg": -7}]
     publicKeys = fetch_data('server.db', 'users', 'publicKeys')
+    tKEM = fetch_data('server.db', 'users', 'CKEMs')
     #server_payload = [challenge, cookie, PK, tKEM, keyParams]
-    server_payload = [challenge, cookie, keyParams, [publicKeys]]
+    server_payload = [challenge, cookie, keyParams, [publicKeys], [tKEM]]
 
     return server_payload
+
+
+def parse_data(pickled_data):
+
+    data = pickle.loads(pickled_data)
+
+
+    pass
 
 
 def generate_signature():
@@ -245,6 +296,7 @@ def start_server():
                 #print(f"Received from client: {data.decode()}")
                 print(data)
                 print(len(data))
+                insert_row_server('server.db', 'users', data)
                 #break
                 #break
             

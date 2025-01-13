@@ -101,12 +101,13 @@ def process_data_client():
     #print(type(byte_message))
     # Decode the byte message to string for processing
     #message = byte_message.decode('utf-8')
+    """
     if byte_message:
         message = pickle.loads(byte_message)
         #function to process received message 
 
         print(message[0])
-
+    """
     # Print the received message in the receiver's terminal
     #print(f"Receiver (received): {message}")
     
@@ -155,7 +156,7 @@ def insert_row_encryptor(db_name, table_name):
         # Commit the transaction
         conn.commit()
         
-        print(f"Row inserted into '{table_name}' with sid = {sid}.")
+        #print(f"Row inserted into '{table_name}' with sid = {sid}.")
         
     except sqlite3.IntegrityError as e:
         # Handle unique constraint violation or other integrity errors
@@ -213,8 +214,8 @@ def encrypt_csal():
     fetch1 = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
     public = enc_suite.kem.deserialize_public_key(fetch1[0])
     encap, sender = enc_suite.create_sender_context(public)
-    helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)
-    fetch3 = server2.fetch_data('encryptor2.db', 'encryptor2', 'encapKeys')
+    #helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)
+    #fetch3 = server2.fetch_data('encryptor2.db', 'encryptor2', 'encapKeys')
 
 
     fetch2 = server2.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
@@ -303,15 +304,15 @@ def sign_verify(pk, signature, message):
 
 if __name__ == "__main__":
    
-    #create_db_and_table('encryptor2.db')
-    #insert_row_encryptor('encryptor2.db', 'encryptor2')
+    create_db_and_table('encryptor2.db')
+    insert_row_encryptor('encryptor2.db', 'encryptor2')
     
     #encrypt_csal()
 
     #generate_symmetric()
 
-    #process_data_client()
-    process_data_encryptor()
+    process_data_client()
+    #process_data_encryptor()
     """
     helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)
     suite = generate_suite()

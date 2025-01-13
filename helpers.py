@@ -125,7 +125,7 @@ def insert_single_value(db_name, table_name, column_name, value):
         # Commit the transaction
         conn.commit()
         
-        print(f"Value '{value}' inserted into '{table_name}' table, column '{column_name}'.")
+        #print(f"Value '{value}' inserted into '{table_name}' table, column '{column_name}'.")
     
     except sqlite3.Error as e:
         # Catch any SQLite errors

@@ -29,6 +29,7 @@ def forward_to_subprocess():
     # Use communicate() to send and receive data
     stdout, stderr = process.communicate(input=serv_bytes)  # Automatically flushes stdin and reads stdout
 
+    """
     # Print the received response (stdout)
     if stdout:
         #print(f"Received: {stdout.decode('utf-8')}")
@@ -37,6 +38,7 @@ def forward_to_subprocess():
         print(type(stdout))
         #print(f"Received: {stdout}")
     # Print any error messages (if any)
+    """
     if stderr:
         print(f"Error: {stderr.decode('utf-8')}")
 
@@ -103,7 +105,7 @@ def start_client():
     
     try:
         
-        while True and i<4:
+        while True and i<1:
 
             # Receive data from the server
             data = client_socket.recv(1024)
