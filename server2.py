@@ -96,6 +96,7 @@ def insert_row_server(db_name, table_name, pickled_data):
     Args:
         db_name (str): The name of the SQLite database file.
         table_name (str): The name of the table into which data is being inserted.
+
     """
     userid = random.randint(1, 9999)
     data = pickle.loads(pickled_data)
@@ -199,8 +200,9 @@ def generate_random_certificate():
     # Return the PEM-encoded certificate and private key
     #To return private key, return private_key_pem.decode('utf-8'), cert_pem.decode('utf-8'), signature
     #return cert_pem.decode('utf-8'), private_key
-    return cert_pem.decode('utf-8'), private_key
+    return cert_pem, private_key
 
+#1647 bytes
 
 def server_params():
 
@@ -210,9 +212,10 @@ def server_params():
     #tKEM = fetch_data('server.db', 'users', 'ciphertexts') #pulled from db
     keyParams = [{"key_params": "public-key", "alg": -7}]
     publicKeys = fetch_data('server.db', 'users', 'publicKeys')
-    tKEM = fetch_data('server.db', 'users', 'CKEMs')
+    #tKEM = fetch_data('server.db', 'users', 'CKEMs')
     #server_payload = [challenge, cookie, PK, tKEM, keyParams]
-    server_payload = [challenge, cookie, keyParams, [publicKeys], [tKEM]]
+    server_payload = [challenge, cookie, keyParams, publicKeys]
+    print(server_payload)
 
     return server_payload
 
@@ -261,7 +264,7 @@ def start_server():
     create_db_and_table('server.db')
 
     #create params for a new session [N, certRP, sigma, cookie, params, cookie temp]
-    servPayload, sigma = generate_signature()
+    
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(('localhost', 12345))  # Binding to localhost on port 12345
@@ -273,6 +276,7 @@ def start_server():
     # Accept incoming client connection
     client_socket, client_address = server_socket.accept()
     print(f"Connection established with {client_address}")
+    
     
 
     try:
@@ -290,13 +294,17 @@ def start_server():
                 #message = input("Enter message to send to client: ")
             #if message:    
             #client_socket.sendall(message.encode())
-            client_socket.sendall(servPayload)
+            servPayload, sigma = generate_signature()
+            all_payload = servPayload + sigma
+            client_socket.sendall(all_payload)
+            print(len(all_payload))
             data = client_socket.recv(1024)
             if data:
                 #print(f"Received from client: {data.decode()}")
-                print(data)
-                print(len(data))
+                #print(data)
+                #print(len(data))
                 insert_row_server('server.db', 'users', data)
+                
                 #break
                 #break
             

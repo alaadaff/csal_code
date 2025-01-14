@@ -8,10 +8,10 @@ import server2
 import pickle
 
 
-def forward_to_subprocess():
+def forward_to_subprocess(serv_bytes):
 
-    serv_params = server2.server_params()
-    serv_bytes = pickle.dumps(serv_params)
+    #serv_params = server2.server_params()
+    #serv_bytes = pickle.dumps(serv_params)
 
     # Start the subprocess (encryptor2.py)
     process = subprocess.Popen(
@@ -113,7 +113,8 @@ def start_client():
                 #print(f"Received from server: {data.decode()}")
                 #print("Received from server: ", data)
                 #message = "lalaland"
-                message = forward_to_subprocess()
+                print(len(data))
+                message = forward_to_subprocess(data)
                 
                 time.sleep(1)
                 client_socket.sendall(message)

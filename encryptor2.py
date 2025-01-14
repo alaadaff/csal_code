@@ -95,6 +95,7 @@ def process_data_client():
 
    # Read the message from stdin (in bytes)
     byte_message = sys.stdin.buffer.read()  # Read bytes from stdin #this is somehow string
+    print(len(byte_message))
     #print(type(byte_message))
     # Optionally print the raw byte message (for debugging)
     #print(f"Receiver (raw received bytes): {byte_message}")
@@ -108,6 +109,7 @@ def process_data_client():
 
         print(message[0])
     """
+    
     # Print the received message in the receiver's terminal
     #print(f"Receiver (received): {message}")
     
