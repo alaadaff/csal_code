@@ -104,23 +104,23 @@ def csal_login():
 
 
 if __name__ == '__main__':
-   
+   csal_login()
     #test1 = fetch_data('server.db', 'users', 'publicKeys')
     #test1 = str(test1)
     #print(type(test1))
     #var = "bless"
     
 #Define the commands for each Python file to be executed
-    python_files = [
-        'python server2.py ',
-        'python client2.py'
-        #'python encryptor_hardware.py'
-    ]
+#     python_files = [
+#         'python server2.py ',
+#         'python client2.py'
+#         #'python encryptor_hardware.py'
+#     ]
 
-#Run each Python script in a new terminal window
-    for command in python_files:
-        run_in_terminal(command)
-        time.sleep(2)
+# #Run each Python script in a new terminal window
+#     for command in python_files:
+#         run_in_terminal(command)
+#         time.sleep(2)
 
 
     
