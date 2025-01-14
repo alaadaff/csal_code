@@ -20,6 +20,12 @@ import encryptor2
 
 def smuggle():
 
+    #best case scenario: encryptor does not have any old keys (usual login)
+    #worst case: encryptor has old keys corresponding to number of ciphertexts, so can decrypt all ciphertexts
+
     all_keys = server2.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
+    CKems = server2.fetch_data('encryptor2.db', 'encryptor2', 'CKEMs')
     #decrypt all ciphertexts
+    for i in range(len(all_keys)):
+        encryptor2.decrypt()
 
