@@ -49,7 +49,7 @@ def create_db_and_table(db_name):
     # Create a table if it doesn't exist
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS encryptor2 (           
-        sid TEXT PRIMARY KEY,
+        sid BLOB PRIMARY KEY,
         user TEXT,
         relyingParty TEXT,
         publicKeys BLOB,
@@ -137,7 +137,7 @@ def insert_row_encryptor(db_name, table_name):
     """
     try:
         # Generate a unique sid (primary key) using UUID
-        sid = str(uuid.uuid4())  # Generate a unique identifier for the sid
+        sid = randbytes(16)  # Generate a unique identifier for the sid
         user = "Bob"
         relyingParty = "facebook.com"
         suiteEnc = generate_suite()
@@ -212,6 +212,8 @@ def generate_key():
 def encrypt_csal():
 
     serial = getSerial()
+    cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
+    serial = serial + pickle.dumps(cl)
     enc_suite = generate_suite()
     fetch1 = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
     public = enc_suite.kem.deserialize_public_key(fetch1[0])
@@ -306,14 +308,16 @@ def sign_verify(pk, signature, message):
 
 if __name__ == "__main__":
    
-    create_db_and_table('encryptor2.db')
-    insert_row_encryptor('encryptor2.db', 'encryptor2')
+    #create_db_and_table('encryptor2.db')
+    #insert_row_encryptor('encryptor2.db', 'encryptor2')
     
-    #encrypt_csal()
+    CDEM, CKEM = encrypt_csal()
+    print(len(CDEM))
+    print(len(CKEM))
 
     #generate_symmetric()
 
-    process_data_client()
+    #process_data_client()
     #process_data_encryptor()
     """
     helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)

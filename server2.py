@@ -15,6 +15,7 @@ import base64
 import string
 import datetime
 import pickle
+import sys
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -294,10 +295,13 @@ def start_server():
                 #message = input("Enter message to send to client: ")
             #if message:    
             #client_socket.sendall(message.encode())
+            cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
             servPayload, sigma = generate_signature()
-            all_payload = servPayload + sigma
-            client_socket.sendall(all_payload)
-            print(len(all_payload))
+            all_payload1 = servPayload + sigma 
+            all_payload2 = servPayload + sigma + pickle.dumps(cl)
+            client_socket.sendall(all_payload1)
+            print(len(all_payload1))
+            print(len(all_payload2))
             data = client_socket.recv(1024)
             if data:
                 #print(f"Received from client: {data.decode()}")
@@ -328,7 +332,31 @@ def main():
    
    
     
-    start_server()
+    #start_server()
+    connection = sqlite3.connect('server.db')
+
+    # Create a cursor object to interact with the database
+    cursor = connection.cursor()
+
+    # SQL query to fetch all data from a table (replace 'your_table' with your actual table name)
+    query = "SELECT * FROM users;"
+
+    # Execute the query
+    cursor.execute(query)
+
+    # Fetch all the rows from the result of the query
+    rows = cursor.fetchall()
+
+    # Iterate over the rows and print each row
+    for row in rows:
+        for i in range(2, 6):
+            print(row[i])
+            #print(sys.getsizeof(row[i]))
+            print(len(row[i]))
+
+    # Close the cursor and connection
+    cursor.close()
+    connection.close()
 
   
     #sqlite3.connect('server.db').execute("INSERT INTO server (publicKeys) VALUES (?)", ('\x04e\xed\xa5\xa1%w\xc2\xba\xe8)C\x7f\xe38p\x1a',)).connection.commit()

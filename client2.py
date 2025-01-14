@@ -109,6 +109,10 @@ def start_client():
 
             # Receive data from the server
             data = client_socket.recv(1024)
+            #cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
+            #encryptor_data = data + (pickle.dumps(cl))
+            #print(type(encryptor_data))
+            #print(len(encryptor_data))
             if data:
                 #print(f"Received from server: {data.decode()}")
                 #print("Received from server: ", data)
