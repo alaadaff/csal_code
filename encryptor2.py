@@ -1,3 +1,4 @@
+import argparse
 import ast
 import base64
 import errno
@@ -25,8 +26,6 @@ from pyhpke import (AEADId, CipherSuite, KDFId, KEMId, KEMInterface, KEMKey,
                     KEMKeyInterface, KEMKeyPair)
 
 import helpers
-
-sessionId = random.randint(1, 10)
 
 def create_db_and_table(db_name):
     # Connect to the SQLite database (it will be created if it doesn't exist)
@@ -84,7 +83,7 @@ def process_data_client():
 
    # Read the message from stdin (in bytes)
     byte_message = sys.stdin.buffer.read()  # Read bytes from stdin #this is somehow string
-    print(len(byte_message))
+    # print(len(byte_message))
     #print(type(byte_message))
     # Optionally print the raw byte message (for debugging)
     #print(f"Receiver (raw received bytes): {byte_message}")
@@ -116,20 +115,20 @@ def process_data_client():
     sys.stdout.flush()  # Ensure the response is flushed
 
 
-def insert_row_encryptor(db_name, table_name):
+def insert_row_encryptor(db_name, table_name, sid):
     """
     Insert a row into the specified SQLite table with generated sid and data.
     
     Args:
         db_name (str): The name of the SQLite database file.
         table_name (str): The name of the table into which data is being inserted.
+        sid (int): Session id.
     """
     try:
         # Generate a unique sid (primary key) using UUID
-        sid = randbytes(16)  # Generate a unique identifier for the sid
         user = "Bob"
         relyingParty = "facebook.com"
-        suiteEnc = generate_suite()
+        # suiteEnc = generate_suite()
         public, private, pk_bytes, sk_bytes = generate_key()
         symmK = generate_symmetric()
         #encap, sender = suiteEnc.create_sender_context(public)
@@ -293,20 +292,56 @@ def sign_verify(pk, signature, message):
     hashes.SHA256()
     )
 
+def run_login_no_smuggle(sid):
+    create_db_and_table('encryptor2.db')
+    insert_row_encryptor('encryptor2.db', 'encryptor2', sid)
+    process_data_client()
+    pass
+
+def run_login_smuggle(sid):
+    create_db_and_table('encryptor2.db')
+    insert_row_encryptor('encryptor2.db', 'encryptor2', sid)
+    pass
+
+def run_action_experiments(sid):
+    pass
+
+def run_reenc_experiments(sid):
+    pass
+
+def run_history_experiments(sid):
+    pass
+
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Select experiment to run')
+    parser.add_argument('--experiment','-e', type=str, nargs=1)
+    parser.add_argument('--sessid','-s', type=int, nargs=1)
+
+    args = parser.parse_args()
+
+    if args.experiment[0] == "lns":
+        run_login_no_smuggle(args.sessid[0])
+    elif args.experiment[0] == "ls":
+        run_login_smuggle(args.sessid[0])
+    elif args.experiment[0] == "a":
+        run_action_experiments(args.sessid[0])
+    elif args.experiment[0] == "r":
+        run_reenc_experiments(args.sessid[0])
+    elif args.experiment[0] == "h":
+        run_history_experiments(args.sessid[0])
    
-    create_db_and_table('encryptor2.db')
-    insert_row_encryptor('encryptor2.db', 'encryptor2')
-    # print("inside encryptor")
+    # create_db_and_table('encryptor2.db')
+    # insert_row_encryptor('encryptor2.db', 'encryptor2')
+    # # print("inside encryptor")
     # CDEM, CKEM = encrypt_csal()
     # print(len(CDEM))
     # print(len(CKEM))
 
     # generate_symmetric()
 
-    process_data_client()
+    # process_data_client()
     #process_data_encryptor()
     """
     helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)

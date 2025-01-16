@@ -140,15 +140,16 @@ class CSALServer():
 
         return server_payload
 
-    def server_run_login(self, smuggle=False):
-        # Create params for a new session [N, certRP, sigma, cookie, params, cookie temp]
+    def server_run_login(self, tlog, log_s, log_e, smuggle=False):
+        # Create params for a new session [N, cookie_tmp, params, PKs, certRP, sigma]
+        t0 = time.time()
         blob = self.server_params_login()
         servPayload, sigma = generate_signature(self.certificate, self.sk, blob)
         all_payload = servPayload + sigma 
+        log_s.append(len(all_payload))
         try:
             self.client_socket.sendall(all_payload)
             while True:
-        
                 # Receive data from the client
                 #data = client_socket.recv(1024)
                 #if not data:
@@ -173,15 +174,15 @@ class CSALServer():
                     #print(data)
                     # print(len(data))
                     self.insert_row_server('users', data)
-                    print("Server done (login)")
                     #break
                     #break
-                
+                    t1 = time.time()
+                    log_e.append(len(data))
                 
                     break
                 #else:
                 #    break
-                
+            tlog.append(t1-t0-1)
         except KeyboardInterrupt:
             print("\nServer shutting down.")
 
@@ -326,23 +327,14 @@ def main():
     #sqlite3.connect('server.db').execute("INSERT INTO server (publicKeys) VALUES (?)", ('\x04e\xed\xa5\xa1%w\xc2\xba\xe8)C\x7f\xe38p\x1a',)).connection.commit()
 
 def run_login_experiments(srv, iter):
+    times_log = []
+    server_sizes_log = []
+    encryptor_sizes_log = []
     try:
         srv.start_server()
-        for _ in range(iter):
-            srv.server_run_login(True)
-    except:
-        raise Exception("Error")
-    finally:
-        if srv.client_socket != None:
-            srv.client_socket.close()
-        if srv.server_socket != None:
-            srv.server_socket.close()
-
-def run_login_experiments_no_smuggle(srv, iter):
-    try:
-        srv.start_server()
-        for _ in range(iter):
-            srv.server_run_login(False)
+        for i in range(iter):
+            print(f"Iteration {i}")
+            srv.server_run_login(times_log, server_sizes_log, encryptor_sizes_log, True)
     except:
         raise Exception("Error")
     finally:
@@ -351,6 +343,32 @@ def run_login_experiments_no_smuggle(srv, iter):
         if srv.server_socket != None:
             srv.server_socket.close()
         os.system(f'rm {srv.db_name}')
+        os.system(f'rm encryptor2.db')
+        print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
+        print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
+        print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")
+
+def run_login_experiments_no_smuggle(srv, iter):
+    times_log = []
+    server_sizes_log = []
+    encryptor_sizes_log = []
+    try:
+        srv.start_server()
+        for i in range(iter):
+            print(f"Iteration {i}")
+            srv.server_run_login(times_log, server_sizes_log, encryptor_sizes_log, False)
+    except:
+        raise Exception("Error")
+    finally:
+        if srv.client_socket != None:
+            srv.client_socket.close()
+        if srv.server_socket != None:
+            srv.server_socket.close()
+        os.system(f'rm {srv.db_name}')
+        os.system(f'rm encryptor2.db')
+        print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
+        print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
+        print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")
 
 def run_reenc_experiments(srv, iter):
     print(3)
@@ -368,7 +386,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Select experiment to run')
     parser.add_argument('--experiment','-e', type=str, nargs=1)
     parser.add_argument('--iterations','-i', type=int, nargs=1, default=1, 
-                        choices=range(100), help="Count of how many iterations.")
+                        choices=range(1,101), help="Count of how many iterations.")
    
     args = parser.parse_args()
     # print(args)

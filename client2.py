@@ -10,18 +10,22 @@ from subprocess import PIPE, Popen
 class CSALClient():
     def __init__(self):
         self.client_socket = None
+        self.sid = 0
 
     def start_client(self):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect(('localhost', 12345))  # Connect to the server
 
     def client_run_login(self, smuggle=False):
+        loginf = 'lns'
+        if smuggle:
+            loginf = 'ls'
         try:
             
             while True:
 
                 # Receive data from the server
-                data = self.client_socket.recv(1024)
+                data = self.client_socket.recv(2048)
                 # print(data)
                 # print(len(data))
                 #cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
@@ -29,11 +33,12 @@ class CSALClient():
                 #print(type(encryptor_data))
                 #print(len(encryptor_data))
                 if data:
-                    message = forward_to_subprocess(data)
+                    message = forward_to_subprocess(data, loginf, str(self.sid))
                     
                     time.sleep(1)
                     self.client_socket.sendall(message)
                     print("Login completed")
+                    self.sid += 1 
                     break
                 
                     # Send data to the server
@@ -42,14 +47,14 @@ class CSALClient():
         except KeyboardInterrupt:
             print("\nClient shutting down.")
 
-def forward_to_subprocess(serv_bytes):
+def forward_to_subprocess(serv_bytes, action, sid):
 
     #serv_params = server2.server_params()
     #serv_bytes = pickle.dumps(serv_params)
 
     # Start the subprocess (encryptor2.py)
     process = subprocess.Popen(
-        ['python3', 'encryptor2.py'],
+        ['python3', 'encryptor2.py', '-e', action, '-s', sid],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -152,7 +157,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Select experiment to run')
     parser.add_argument('--experiment','-e', type=str, nargs=1)
     parser.add_argument('--iterations','-i', type=int, nargs=1, default=1, 
-                        choices=range(100), help="Count of how many iterations.")
+                        choices=range(1,101), help="Count of how many iterations.")
    
     args = parser.parse_args()
 

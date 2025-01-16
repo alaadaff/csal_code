@@ -18,3 +18,4 @@ For `n` iterations on the `login-no-smuggle` experiment, run
 ```
 python3 simulator.py -e login-no-smuggle -i n
 ```
+The measured outputs are shown in the server window.
