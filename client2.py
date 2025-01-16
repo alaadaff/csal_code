@@ -94,8 +94,8 @@ def forward_to_subprocess():
 
 def start_client():
 
-    serv_params = server2.server_params()
-    serv_bytes = pickle.dumps(serv_params)
+    # serv_params = server2.server_params()
+    # serv_bytes = pickle.dumps(serv_params)
 
     # Set up the client
     
@@ -106,10 +106,12 @@ def start_client():
     
     try:
         
-        while True and i<1:
+        while True:
 
             # Receive data from the server
             data = client_socket.recv(1024)
+            print(data)
+            print(len(data))
             #cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
             #encryptor_data = data + (pickle.dumps(cl))
             #print(type(encryptor_data))
@@ -122,6 +124,8 @@ def start_client():
                 message = forward_to_subprocess(data)
                 
                 time.sleep(1)
+                print(message)
+                print(len(message))
                 client_socket.sendall(message)
                 print("Login completed")
                 #break
@@ -142,7 +146,8 @@ def run_login_experiments():
     pass
 
 def run_login_experiments_no_smuggle():
-    print(2)
+    print("here client\n")
+    start_client()
     pass
 
 def run_reenc_experiments():
@@ -175,12 +180,6 @@ if __name__ == '__main__':
     elif args.experiment[0] == "r":
         run_reenc_experiments()
     elif args.experiment[0] == "h":
-        run_history_experiments()
-    elif args.experiment[0] == "all":
-        run_login_experiments()
-        run_login_experiments_no_smuggle()
-        run_action_experiments()
-        run_reenc_experiments()
         run_history_experiments()
 
     # start_client()

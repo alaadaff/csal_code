@@ -64,8 +64,8 @@ def process_data_encryptor():
     
     
     Ckem, Cdem = encrypt_csal()
-    sessID = server2.fetch_data('encryptor2.db', 'encryptor2', 'sid')
-    pk_payload = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
+    sessID = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
+    pk_payload = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
     sign, certA = generateSignature(pickle.dumps([sessID[0], pk_payload[0]]))
 
     #certA = server2.generate_random_certificate()
@@ -211,7 +211,7 @@ def encrypt_csal():
     #fetch3 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'encapKeys')
 
 
-    fetch2 = server2.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
+    fetch2 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
     token = Fernet(fetch2[0])
     
     C_dem = token.encrypt(serial)
@@ -228,7 +228,7 @@ def encrypt_csal():
 def decrypt_csal(ciphertext):
 
     dec_suite = generate_suite()
-    fetch3 = server2.fetch_data('encryptor2.db', 'encryptor2', 'secretKeys')
+    fetch3 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'secretKeys')
     sk = dec_suite.kem.deserialize_private_key(fetch3[0])
     recipient = dec_suite.create_recipient_context(encap, sk)
 
