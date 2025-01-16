@@ -297,16 +297,16 @@ def sign_verify(pk, signature, message):
 
 if __name__ == "__main__":
    
-    #create_db_and_table('encryptor2.db')
-    #insert_row_encryptor('encryptor2.db', 'encryptor2')
-    
-    CDEM, CKEM = encrypt_csal()
-    print(len(CDEM))
-    print(len(CKEM))
+    create_db_and_table('encryptor2.db')
+    insert_row_encryptor('encryptor2.db', 'encryptor2')
+    # print("inside encryptor")
+    # CDEM, CKEM = encrypt_csal()
+    # print(len(CDEM))
+    # print(len(CKEM))
 
-    #generate_symmetric()
+    # generate_symmetric()
 
-    #process_data_client()
+    process_data_client()
     #process_data_encryptor()
     """
     helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)

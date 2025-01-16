@@ -7,7 +7,9 @@ import secrets
 import socket
 import sqlite3
 import string
+import time
 import sys
+import os
 from random import randbytes
 
 import cryptography.x509
@@ -134,18 +136,17 @@ class CSALServer():
         #tKEM = fetch_data('server.db', 'users', 'CKEMs')
         #server_payload = [challenge, cookie, PK, tKEM, keyParams]
         server_payload = [challenge, cookie, keyParams, publicKeys]
-        print(server_payload)
+        # print(server_payload)
 
         return server_payload
 
-    def server_run_login(self):
+    def server_run_login(self, smuggle=False):
         # Create params for a new session [N, certRP, sigma, cookie, params, cookie temp]
         blob = self.server_params_login()
-        print(blob)
         servPayload, sigma = generate_signature(self.certificate, self.sk, blob)
         all_payload = servPayload + sigma 
-        print(len(all_payload))
         try:
+            self.client_socket.sendall(all_payload)
             while True:
         
                 # Receive data from the client
@@ -165,30 +166,24 @@ class CSALServer():
                 # # print(blob)
                 # all_payload1 = servPayload + sigma 
                 # all_payload2 = servPayload + sigma + pickle.dumps(cl)
-                self.client_socket.sendall(all_payload)
-                data = self.client_socket.recv(1024)
-                print("data is ")
-                print(data)
-                print(len(data))
+                # self.client_socket.sendall(all_payload)
+                data = self.client_socket.recv(2048)
                 if data:
                     #print(f"Received from client: {data.decode()}")
                     #print(data)
-                    #print(len(data))
+                    # print(len(data))
                     self.insert_row_server('users', data)
-                    
+                    print("Server done (login)")
                     #break
                     #break
                 
                 
-                break
+                    break
                 #else:
                 #    break
                 
         except KeyboardInterrupt:
             print("\nServer shutting down.")
-        finally:
-            self.client_socket.close()
-            self.server_socket.close()
 
 
 #function to create random RP certs and signature 
@@ -330,24 +325,42 @@ def main():
   
     #sqlite3.connect('server.db').execute("INSERT INTO server (publicKeys) VALUES (?)", ('\x04e\xed\xa5\xa1%w\xc2\xba\xe8)C\x7f\xe38p\x1a',)).connection.commit()
 
-def run_login_experiments(srv):
-    print(1)
-    pass
+def run_login_experiments(srv, iter):
+    try:
+        srv.start_server()
+        for _ in range(iter):
+            srv.server_run_login(True)
+    except:
+        raise Exception("Error")
+    finally:
+        if srv.client_socket != None:
+            srv.client_socket.close()
+        if srv.server_socket != None:
+            srv.server_socket.close()
 
-def run_login_experiments_no_smuggle(srv):
-    srv.start_server()
-    srv.server_run_login()
-    pass
+def run_login_experiments_no_smuggle(srv, iter):
+    try:
+        srv.start_server()
+        for _ in range(iter):
+            srv.server_run_login(False)
+    except:
+        raise Exception("Error")
+    finally:
+        if srv.client_socket != None:
+            srv.client_socket.close()
+        if srv.server_socket != None:
+            srv.server_socket.close()
+        os.system(f'rm {srv.db_name}')
 
-def run_reenc_experiments(srv):
+def run_reenc_experiments(srv, iter):
     print(3)
     pass
 
-def run_action_experiments(srv):
+def run_action_experiments(srv, iter):
     print(4)
     pass
 
-def run_history_experiments(srv):
+def run_history_experiments(srv, iter):
     print(5)
     pass
 
@@ -363,15 +376,15 @@ if __name__ == '__main__':
     csal_srv = CSALServer()
 
     if args.experiment[0] == "lns":
-        run_login_experiments_no_smuggle(csal_srv)
+        run_login_experiments_no_smuggle(csal_srv, args.iterations[0])
     elif args.experiment[0] == "ls":
-        run_login_experiments(csal_srv)
+        run_login_experiments(csal_srv, args.iterations[0])
     elif args.experiment[0] == "a":
-        run_action_experiments(csal_srv)
+        run_action_experiments(csal_srv, args.iterations[0])
     elif args.experiment[0] == "r":
-        run_reenc_experiments(csal_srv)
+        run_reenc_experiments(csal_srv, args.iterations[0])
     elif args.experiment[0] == "h":
-        run_history_experiments(csal_srv)
+        run_history_experiments(csal_srv, args.iterations[0])
    
 #    main()
 
