@@ -1,41 +1,30 @@
-import sys
-from pyhpke import AEADId, CipherSuite, KDFId, KEMId, KEMKey, KEMKeyPair, KEMInterface, KEMKeyInterface
-from cryptography.fernet import Fernet
-import subprocess 
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ec import (
-    EllipticCurvePrivateKey,
-    EllipticCurvePublicKey,
-)
-from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import serialization
-from random import randbytes
-import socket
-import json
 import ast
-
-import sqlite3
-from random import randbytes
-import os
-import errno
-import pickle  
-import ast
-from time import process_time
-import subprocess
-import sqlite3
-import simulator
-import random  
-import helpers
-import time
-import server2
-import uuid
 import base64
+import errno
+import json
+import os
+import pickle
+import random
+import socket
+import sqlite3
+import subprocess
+import sys
+import time
+import uuid
+from random import randbytes
+from time import process_time
 
+from cryptography.fernet import Fernet
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+from cryptography.hazmat.primitives.asymmetric.ec import (
+    EllipticCurvePrivateKey, EllipticCurvePublicKey)
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from pyhpke import (AEADId, CipherSuite, KDFId, KEMId, KEMInterface, KEMKey,
+                    KEMKeyInterface, KEMKeyPair)
+
+import helpers
 
 sessionId = random.randint(1, 10)
 
@@ -215,11 +204,11 @@ def encrypt_csal():
     cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
     serial = serial + pickle.dumps(cl)
     enc_suite = generate_suite()
-    fetch1 = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
+    fetch1 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
     public = enc_suite.kem.deserialize_public_key(fetch1[0])
     encap, sender = enc_suite.create_sender_context(public)
     #helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)
-    #fetch3 = server2.fetch_data('encryptor2.db', 'encryptor2', 'encapKeys')
+    #fetch3 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'encapKeys')
 
 
     fetch2 = server2.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')

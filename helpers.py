@@ -1,50 +1,30 @@
-import sqlite3
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives import serialization
-import uuid
-from pyhpke import AEADId, CipherSuite, KDFId, KEMId, KEMKey, KEMKeyPair, KEMInterface, KEMKeyInterface
-from cryptography.fernet import Fernet
-import subprocess 
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ec import (
-    EllipticCurvePrivateKey,
-    EllipticCurvePublicKey,
-)
-
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
-from cryptography.x509 import Name, NameAttribute, CertificateBuilder
-from cryptography.hazmat.primitives import hashes
-from cryptography.x509.oid import NameOID
+import argparse
+import base64
 import datetime
+import os
+import pickle
 import random
+import secrets
 import socket
 import sqlite3
-import argparse
-import simulator
-from random import randbytes
-import secrets
-import base64
 import string
-import datetime
-import pickle
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
+import subprocess
+import uuid
+from random import randbytes
+
+import cryptography.x509
+from cryptography.fernet import Fernet
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+from cryptography.hazmat.primitives.asymmetric.ec import (
+    EllipticCurvePrivateKey, EllipticCurvePublicKey)
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.x509 import CertificateBuilder, Name, NameAttribute
 from cryptography.x509.oid import NameOID
-import cryptography.x509
-from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import serialization
-from random import randbytes
-import os
-import server2
-#import encryptor2
+from pyhpke import (AEADId, CipherSuite, KDFId, KEMId, KEMInterface, KEMKey,
+                    KEMKeyInterface, KEMKeyPair)
+
 
 def serialize_public_key(public_key):
     # Serialize the EC public key to PEM format (you can also use DER if preferred)
@@ -125,6 +105,30 @@ def insert_row_encryptor(db_name, table_name):
     #insert_row_encryptor('encryptor2.db', 'encryptor2')
  """
 
+def insert_into_single_column(db_name, table_name, column_name, values):
+    """
+    Inserts values into a single column of the specified table in the SQLite database.
+
+    Parameters:
+    - db_name: The name of the SQLite database file.
+    - table_name: The name of the table where values will be inserted.
+    - column_name: The column name into which values will be inserted.
+    - values: A list or tuple of values to insert into the column.
+    """
+    # Connect to the SQLite database
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    # Prepare the SQL INSERT statement
+    sql = f"INSERT INTO {table_name} ({column_name}) VALUES (?)"
+
+    # Execute the INSERT statement for each value in the values list
+    for value in values:
+        cursor.execute(sql, (value,))
+
+    # Commit the transaction and close the connection
+    conn.commit()
+    conn.close()
 
 def insert_single_value(db_name, table_name, column_name, value):
     """
@@ -254,7 +258,33 @@ def generate_random_certificate():
     return cert_pem, private_key, public_pem        
 
 
+    """
+    Returns list of all rows, and each column_data[0] is the value of first row in string 
+    """
+def fetch_data(db_name, table_name, column_name):
+    # Connect to the SQLite database
+    conn = sqlite3.connect(db_name)
+    
+    # Create a cursor object to interact with the database
+    cursor = conn.cursor()
 
+    #SELECT data from the specified column in the given table
+    query = f"SELECT {column_name} FROM {table_name}"  
+    cursor.execute(query)
+
+    # Fetch all rows from the result of the query
+    rows = cursor.fetchall()
+
+    # Extract and store the contents of the column
+    column_data = [row[0] for row in rows]  # Since each row is a tuple, the data is in row[0]
+    #column_data = " ".join(column_data) 
+    # Print the contents of the column
+    #print(column_data)
+
+    # Close the connection
+    conn.close()
+
+    return column_data
 
 
 

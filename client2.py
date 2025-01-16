@@ -1,11 +1,12 @@
+import argparse
+import pickle
 import socket
 import subprocess
 import sys
-import simulator
-from subprocess import Popen, PIPE
 import time
+from subprocess import PIPE, Popen
+
 import server2
-import pickle
 
 
 def forward_to_subprocess(serv_bytes):
@@ -135,11 +136,54 @@ def start_client():
     finally:
         client_socket.close()
 
-   
+
+def run_login_experiments():
+    print(1)
+    pass
+
+def run_login_experiments_no_smuggle():
+    print(2)
+    pass
+
+def run_reenc_experiments():
+    print(3)
+    pass
+
+def run_action_experiments():
+    print(4)
+    pass
+
+def run_history_experiments():
+    print(5)
+    pass 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Select experiment to run')
+    parser.add_argument('--experiment','-e', type=str, nargs=1)
+    parser.add_argument('--iterations','-i', type=int, nargs=1, default=1, 
+                        choices=range(100), help="Count of how many iterations.")
+   
+    args = parser.parse_args()
+    print(args)
 
-    start_client()
+    if args.experiment[0] == "lns":
+        run_login_experiments_no_smuggle()
+    elif args.experiment[0] == "ls":
+        run_login_experiments()
+    elif args.experiment[0] == "a":
+        run_action_experiments()
+    elif args.experiment[0] == "r":
+        run_reenc_experiments()
+    elif args.experiment[0] == "h":
+        run_history_experiments()
+    elif args.experiment[0] == "all":
+        run_login_experiments()
+        run_login_experiments_no_smuggle()
+        run_action_experiments()
+        run_reenc_experiments()
+        run_history_experiments()
+
+    # start_client()
     
     #simulator.run_in_terminal('python3 encryptor2.py')
     

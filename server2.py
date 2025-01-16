@@ -1,39 +1,28 @@
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
-from cryptography.x509 import Name, NameAttribute, CertificateBuilder
-from cryptography.hazmat.primitives import hashes
-from cryptography.x509.oid import NameOID
-import datetime
-import random
-import socket
-import sqlite3
 import argparse
-import simulator
-from random import randbytes
-import secrets
 import base64
-import string
 import datetime
 import pickle
+import random
+import secrets
+import socket
+import sqlite3
+import string
 import sys
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
+from random import randbytes
+
+import cryptography.x509
+from cryptography.fernet import Fernet
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+from cryptography.hazmat.primitives.asymmetric.ec import (
+    EllipticCurvePrivateKey, EllipticCurvePublicKey)
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.x509 import CertificateBuilder, Name, NameAttribute
 from cryptography.x509.oid import NameOID
-import cryptography.x509
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ec import (
-    EllipticCurvePrivateKey,
-    EllipticCurvePublicKey,
-)
-from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import serialization
+
+import helpers
+
 
 #function to create the server db if does not exist
 def create_db_and_table(db_name):
@@ -62,33 +51,6 @@ def create_db_and_table(db_name):
     # Commit the changes and close the connection
     conn.commit()
     conn.close()
-
-
- #returns list of all rows, and each column_data[0] is the value of first row in string 
-def fetch_data(db_name, table_name, column_name):
-    # Connect to the SQLite database
-    conn = sqlite3.connect(db_name)
-    
-    # Create a cursor object to interact with the database
-    cursor = conn.cursor()
-
-    #SELECT data from the specified column in the given table
-    query = f"SELECT {column_name} FROM {table_name}"  
-    cursor.execute(query)
-
-    # Fetch all rows from the result of the query
-    rows = cursor.fetchall()
-
-    # Extract and store the contents of the column
-    column_data = [row[0] for row in rows]  # Since each row is a tuple, the data is in row[0]
-    #column_data = " ".join(column_data) 
-    # Print the contents of the column
-    #print(column_data)
-
-    # Close the connection
-    conn.close()
-
-    return column_data
 
 def insert_row_server(db_name, table_name, pickled_data):
     """
@@ -212,7 +174,7 @@ def server_params():
     #PK = fetch_data('server.db', 'users', 'publicKeys') #pulled from db
     #tKEM = fetch_data('server.db', 'users', 'ciphertexts') #pulled from db
     keyParams = [{"key_params": "public-key", "alg": -7}]
-    publicKeys = fetch_data('server.db', 'users', 'publicKeys')
+    publicKeys = helpers.fetch_data('server.db', 'users', 'publicKeys')
     #tKEM = fetch_data('server.db', 'users', 'CKEMs')
     #server_payload = [challenge, cookie, PK, tKEM, keyParams]
     server_payload = [challenge, cookie, keyParams, publicKeys]
@@ -361,10 +323,54 @@ def main():
   
     #sqlite3.connect('server.db').execute("INSERT INTO server (publicKeys) VALUES (?)", ('\x04e\xed\xa5\xa1%w\xc2\xba\xe8)C\x7f\xe38p\x1a',)).connection.commit()
 
+def run_login_experiments():
+    print(1)
+    pass
+
+def run_login_experiments_no_smuggle():
+    print(2)
+    pass
+
+def run_reenc_experiments():
+    print(3)
+    pass
+
+def run_action_experiments():
+    print(4)
+    pass
+
+def run_history_experiments():
+    print(5)
+    pass
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Select experiment to run')
+    parser.add_argument('--experiment','-e', type=str, nargs=1)
+    parser.add_argument('--iterations','-i', type=int, nargs=1, default=1, 
+                        choices=range(100), help="Count of how many iterations.")
    
-   main()
+    args = parser.parse_args()
+    print(args)
+
+    if args.experiment[0] == "lns":
+        run_login_experiments_no_smuggle()
+    elif args.experiment[0] == "ls":
+        run_login_experiments()
+    elif args.experiment[0] == "a":
+        run_action_experiments()
+    elif args.experiment[0] == "r":
+        run_reenc_experiments()
+    elif args.experiment[0] == "h":
+        run_history_experiments()
+    elif args.experiment[0] == "all":
+        run_login_experiments()
+        run_login_experiments_no_smuggle()
+        run_action_experiments()
+        run_reenc_experiments()
+        run_history_experiments()
+
+   
+#    main()
 
     #start_server()
     #create_db_and_table('server.db')
