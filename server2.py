@@ -1,137 +1,190 @@
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
-from cryptography.x509 import Name, NameAttribute, CertificateBuilder
-from cryptography.hazmat.primitives import hashes
-from cryptography.x509.oid import NameOID
-import datetime
-import random
-import socket
-import sqlite3
 import argparse
-import simulator
-from random import randbytes
-import secrets
 import base64
-import string
 import datetime
 import pickle
+import random
+import secrets
+import socket
+import sqlite3
+import string
+import time
 import sys
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
+import os
+from random import randbytes
+
+import cryptography.x509
+from cryptography.fernet import Fernet
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+from cryptography.hazmat.primitives.asymmetric.ec import (
+    EllipticCurvePrivateKey, EllipticCurvePublicKey)
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.x509 import CertificateBuilder, Name, NameAttribute
 from cryptography.x509.oid import NameOID
-import cryptography.x509
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ec import (
-    EllipticCurvePrivateKey,
-    EllipticCurvePublicKey,
-)
-from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import serialization
 
-#function to create the server db if does not exist
-def create_db_and_table(db_name):
-    # Connect to the SQLite database (it will be created if it doesn't exist)
-    conn = sqlite3.connect(db_name)
-
-    # Create a cursor object to interact with the database
-    cursor = conn.cursor()
-
-    # Create a table if it doesn't exist
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        uid INTEGER PRIMARY KEY,
-        user TEXT,
-        sid TEXT,
-        publicKeys BLOB,
-        CKEMs BLOB,
-        CDEMs BLOB           
-
-    )
-    ''')
-
-    #Try insert into db
-    #cursor.execute("INSERT INTO server (publicKeys) VALUES (?)", ('\x04e\xed\xa5\xa1%w\xc2\xba\xe8)C\x7f\xe38p\x1a',))
-
-    # Commit the changes and close the connection
-    conn.commit()
-    conn.close()
+import helpers
 
 
- #returns list of all rows, and each column_data[0] is the value of first row in string 
-def fetch_data(db_name, table_name, column_name):
-    # Connect to the SQLite database
-    conn = sqlite3.connect(db_name)
-    
-    # Create a cursor object to interact with the database
-    cursor = conn.cursor()
+class CSALServer():
+    def __init__(self):
+        self.db_name = 'server.db'
+        self.certificate = None
+        self.sk = None
+        self.server_socket = None
+        self.client_socket = None
 
-    #SELECT data from the specified column in the given table
-    query = f"SELECT {column_name} FROM {table_name}"  
-    cursor.execute(query)
+    def start_server(self):
+        """ Initialize CSALServer attributes"""
 
-    # Fetch all rows from the result of the query
-    rows = cursor.fetchall()
-
-    # Extract and store the contents of the column
-    column_data = [row[0] for row in rows]  # Since each row is a tuple, the data is in row[0]
-    #column_data = " ".join(column_data) 
-    # Print the contents of the column
-    #print(column_data)
-
-    # Close the connection
-    conn.close()
-
-    return column_data
-
-def insert_row_server(db_name, table_name, pickled_data):
-    """
-    Insert a row into the specified SQLite table with generated sid and data.
-    
-    Args:
-        db_name (str): The name of the SQLite database file.
-        table_name (str): The name of the table into which data is being inserted.
-
-    """
-    userid = random.randint(1, 9999)
-    data = pickle.loads(pickled_data)
-    user = "Alice"
-    sid = data[0]
-    publicK = data[1]
-    ckem = data[2]
-    cdem = data[3]
-    try:
+        # Set up the server
+        self.create_db_and_table()
         
-        # Connect to the SQLite database
-        conn = sqlite3.connect(db_name)
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.bind(('localhost', 12345))  # Binding to localhost on port 12345
+        self.server_socket.listen(4)  # Listen for one client connection
+
+        print("Server is listening for incoming connections...")
+
+        
+        # Accept incoming client connection
+        self.client_socket, client_address = self.server_socket.accept()
+        print(f"Connection established with {client_address}")
+
+        self.certificate, self.sk = generate_random_certificate()
+
+
+    def create_db_and_table(self):
+        """ Create the server db if does not exist """
+        # Connect to the SQLite database (it will be created if it doesn't exist)
+        conn = sqlite3.connect(self.db_name)
+
+        # Create a cursor object to interact with the database
         cursor = conn.cursor()
 
-        # Prepare the SQL query with placeholders for variables
-        sql = f"INSERT INTO {table_name} (uid, user, sid, publicKeys, CKEMs, CDEMs) VALUES (?, ?, ?, ?, ?, ?)"
-        
-        # Execute the query, passing the values as a tuple
-        cursor.execute(sql, (userid, user, sid, publicK, ckem, cdem))
-        
-        # Commit the transaction
+        # Create a table if it doesn't exist
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            uid INTEGER PRIMARY KEY,
+            user TEXT,
+            sid TEXT,
+            publicKeys BLOB,
+            CKEMs BLOB,
+            CDEMs BLOB           
+
+        )
+        ''')
+
+        #Try insert into db
+        #cursor.execute("INSERT INTO server (publicKeys) VALUES (?)", ('\x04e\xed\xa5\xa1%w\xc2\xba\xe8)C\x7f\xe38p\x1a',))
+
+        # Commit the changes and close the connection
         conn.commit()
-        
-        #print(f"Row inserted into '{table_name}' with sid = {sid}.")
-        
-    except sqlite3.IntegrityError as e:
-        # Handle unique constraint violation or other integrity errors
-        print(f"IntegrityError: {e}")
-    except sqlite3.Error as e:
-        # Catch any other SQLite errors
-        print(f"SQLite Error: {e}")
-    finally:
-        # Close the connection to the database
         conn.close()
+
+    def insert_row_server(self, table_name, pickled_data):
+        """
+        Insert a row into the specified SQLite table with generated sid and data.
+        
+        Args:
+            
+            table_name (str): The name of the table into which data is being inserted.
+            pickled_data : data to add to the table
+        """
+        userid = random.randint(1, 9999)
+        data = pickle.loads(pickled_data)
+        user = "Alice"
+        sid = data[0]
+        publicK = data[1]
+        ckem = data[2]
+        cdem = data[3]
+        try:
+            
+            # Connect to the SQLite database
+            conn = sqlite3.connect(self.db_name)
+            cursor = conn.cursor()
+
+            # Prepare the SQL query with placeholders for variables
+            sql = f"INSERT INTO {table_name} (uid, user, sid, publicKeys, CKEMs, CDEMs) VALUES (?, ?, ?, ?, ?, ?)"
+            
+            # Execute the query, passing the values as a tuple
+            cursor.execute(sql, (userid, user, sid, publicK, ckem, cdem))
+            
+            # Commit the transaction
+            conn.commit()
+            
+            #print(f"Row inserted into '{table_name}' with sid = {sid}.")
+            
+        except sqlite3.IntegrityError as e:
+            # Handle unique constraint violation or other integrity errors
+            print(f"IntegrityError: {e}")
+        except sqlite3.Error as e:
+            # Catch any other SQLite errors
+            print(f"SQLite Error: {e}")
+        finally:
+            # Close the connection to the database
+            conn.close()
+
+    def server_params_login(self):
+
+        challenge = str(randbytes(16))
+        cookie = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8')
+        #PK = fetch_data('server.db', 'users', 'publicKeys') #pulled from db
+        #tKEM = fetch_data('server.db', 'users', 'ciphertexts') #pulled from db
+        keyParams = [{"key_params": "public-key", "alg": -7}]
+        publicKeys = helpers.fetch_data('server.db', 'users', 'publicKeys')
+        #tKEM = fetch_data('server.db', 'users', 'CKEMs')
+        #server_payload = [challenge, cookie, PK, tKEM, keyParams]
+        server_payload = [challenge, cookie, keyParams, publicKeys]
+        # print(server_payload)
+
+        return server_payload
+
+    def server_run_login(self, tlog, log_s, log_e, smuggle=False):
+        # Create params for a new session [N, cookie_tmp, params, PKs, certRP, sigma]
+        t0 = time.time()
+        blob = self.server_params_login()
+        servPayload, sigma = generate_signature(self.certificate, self.sk, blob)
+        all_payload = servPayload + sigma 
+        log_s.append(len(all_payload))
+        try:
+            self.client_socket.sendall(all_payload)
+            while True:
+                # Receive data from the client
+                #data = client_socket.recv(1024)
+                #if not data:
+                #    break  # If no data, exit the loop (client disconnected)
+                #print(f"Received from client: {data.decode()}")
+
+                # Send data back to the client
+                #else:
+                #message = str(fetch_data('server.db', 'users', 'publicKeys'))
+                    #message = input("Enter message to send to client: ")
+                #if message:    
+                #client_socket.sendall(message.encode())
+                # cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
+                # # blob = self.server_params_login()
+                # # print(blob)
+                # all_payload1 = servPayload + sigma 
+                # all_payload2 = servPayload + sigma + pickle.dumps(cl)
+                # self.client_socket.sendall(all_payload)
+                data = self.client_socket.recv(2048)
+                if data:
+                    #print(f"Received from client: {data.decode()}")
+                    #print(data)
+                    # print(len(data))
+                    self.insert_row_server('users', data)
+                    #break
+                    #break
+                    t1 = time.time()
+                    log_e.append(len(data))
+                
+                    break
+                #else:
+                #    break
+            tlog.append(t1-t0-1)
+        except KeyboardInterrupt:
+            print("\nServer shutting down.")
 
 
 #function to create random RP certs and signature 
@@ -203,24 +256,6 @@ def generate_random_certificate():
     #return cert_pem.decode('utf-8'), private_key
     return cert_pem, private_key
 
-#1647 bytes
-
-def server_params():
-
-    challenge = str(randbytes(16))
-    cookie = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8')
-    #PK = fetch_data('server.db', 'users', 'publicKeys') #pulled from db
-    #tKEM = fetch_data('server.db', 'users', 'ciphertexts') #pulled from db
-    keyParams = [{"key_params": "public-key", "alg": -7}]
-    publicKeys = fetch_data('server.db', 'users', 'publicKeys')
-    #tKEM = fetch_data('server.db', 'users', 'CKEMs')
-    #server_payload = [challenge, cookie, PK, tKEM, keyParams]
-    server_payload = [challenge, cookie, keyParams, publicKeys]
-    print(server_payload)
-
-    return server_payload
-
-
 def parse_data(pickled_data):
 
     data = pickle.loads(pickled_data)
@@ -228,16 +263,16 @@ def parse_data(pickled_data):
 
     pass
 
+def generate_signature(cert, sk, blob):
+    if cert == None or sk == None:
+        raise  Exception("No certificate or secret key")
 
-def generate_signature():
-
-    cert, private_key = generate_random_certificate()
-    blob = server_params()
+    # blob = server_params_login()
     blob.append(cert)
     blob = pickle.dumps(blob)
     
 
-    signature = private_key.sign(
+    signature = sk.sign(
         blob,
         padding.PSS(
              mgf=padding.MGF1(hashes.SHA256()),
@@ -253,76 +288,6 @@ def generate_signature():
     
 
     return blob, signature
-
-
-
-
-
-
-#function to start the server
-def start_server():
-    # Set up the server
-    create_db_and_table('server.db')
-
-    #create params for a new session [N, certRP, sigma, cookie, params, cookie temp]
-    
-
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('localhost', 12345))  # Binding to localhost on port 12345
-    server_socket.listen(4)  # Listen for one client connection
-
-    print("Server is listening for incoming connections...")
-
-    
-    # Accept incoming client connection
-    client_socket, client_address = server_socket.accept()
-    print(f"Connection established with {client_address}")
-    
-    
-
-    try:
-        while True:
-    
-            # Receive data from the client
-            #data = client_socket.recv(1024)
-            #if not data:
-            #    break  # If no data, exit the loop (client disconnected)
-            #print(f"Received from client: {data.decode()}")
-
-            # Send data back to the client
-            #else:
-            #message = str(fetch_data('server.db', 'users', 'publicKeys'))
-                #message = input("Enter message to send to client: ")
-            #if message:    
-            #client_socket.sendall(message.encode())
-            cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
-            servPayload, sigma = generate_signature()
-            all_payload1 = servPayload + sigma 
-            all_payload2 = servPayload + sigma + pickle.dumps(cl)
-            client_socket.sendall(all_payload1)
-            print(len(all_payload1))
-            print(len(all_payload2))
-            data = client_socket.recv(1024)
-            if data:
-                #print(f"Received from client: {data.decode()}")
-                print(data)
-                #print(len(data))
-                #insert_row_server('server.db', 'users', data)
-                
-                #break
-                #break
-            
-            
-            
-            #else:
-            #    break
-            
-    except KeyboardInterrupt:
-        print("\nServer shutting down.")
-    finally:
-        client_socket.close()
-        server_socket.close()
-
 
 def main():
     #parser = argparse.ArgumentParser()
@@ -361,10 +326,85 @@ def main():
     """
     #sqlite3.connect('server.db').execute("INSERT INTO server (publicKeys) VALUES (?)", ('\x04e\xed\xa5\xa1%w\xc2\xba\xe8)C\x7f\xe38p\x1a',)).connection.commit()
 
+def run_login_experiments(srv, iter):
+    times_log = []
+    server_sizes_log = []
+    encryptor_sizes_log = []
+    try:
+        srv.start_server()
+        for i in range(iter):
+            print(f"Iteration {i}")
+            srv.server_run_login(times_log, server_sizes_log, encryptor_sizes_log, True)
+    except:
+        raise Exception("Error")
+    finally:
+        if srv.client_socket != None:
+            srv.client_socket.close()
+        if srv.server_socket != None:
+            srv.server_socket.close()
+        os.system(f'rm {srv.db_name}')
+        os.system(f'rm encryptor2.db')
+        print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
+        print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
+        print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")
+
+def run_login_experiments_no_smuggle(srv, iter):
+    times_log = []
+    server_sizes_log = []
+    encryptor_sizes_log = []
+    try:
+        srv.start_server()
+        for i in range(iter):
+            print(f"Iteration {i}")
+            srv.server_run_login(times_log, server_sizes_log, encryptor_sizes_log, False)
+    except:
+        raise Exception("Error")
+    finally:
+        if srv.client_socket != None:
+            srv.client_socket.close()
+        if srv.server_socket != None:
+            srv.server_socket.close()
+        os.system(f'rm {srv.db_name}')
+        os.system(f'rm encryptor2.db')
+        print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
+        print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
+        print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")
+
+def run_reenc_experiments(srv, iter):
+    print(3)
+    pass
+
+def run_action_experiments(srv, iter):
+    print(4)
+    pass
+
+def run_history_experiments(srv, iter):
+    print(5)
+    pass
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Select experiment to run')
+    parser.add_argument('--experiment','-e', type=str, nargs=1)
+    parser.add_argument('--iterations','-i', type=int, nargs=1, default=1, 
+                        choices=range(1,101), help="Count of how many iterations.")
    
-   main()
+    args = parser.parse_args()
+    # print(args)
+
+    csal_srv = CSALServer()
+
+    if args.experiment[0] == "lns":
+        run_login_experiments_no_smuggle(csal_srv, args.iterations[0])
+    elif args.experiment[0] == "ls":
+        run_login_experiments(csal_srv, args.iterations[0])
+    elif args.experiment[0] == "a":
+        run_action_experiments(csal_srv, args.iterations[0])
+    elif args.experiment[0] == "r":
+        run_reenc_experiments(csal_srv, args.iterations[0])
+    elif args.experiment[0] == "h":
+        run_history_experiments(csal_srv, args.iterations[0])
+   
+#    main()
 
     #start_server()
     #create_db_and_table('server.db')

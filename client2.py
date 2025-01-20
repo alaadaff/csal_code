@@ -1,21 +1,60 @@
+import argparse
+import pickle
 import socket
 import subprocess
 import sys
-import simulator
-from subprocess import Popen, PIPE
 import time
-import server2
-import pickle
+from subprocess import PIPE, Popen
 
 
-def forward_to_subprocess(serv_bytes):
+class CSALClient():
+    def __init__(self):
+        self.client_socket = None
+        self.sid = 0
+
+    def start_client(self):
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket.connect(('localhost', 12345))  # Connect to the server
+
+    def client_run_login(self, smuggle=False):
+        loginf = 'lns'
+        if smuggle:
+            loginf = 'ls'
+        try:
+            
+            while True:
+
+                # Receive data from the server
+                data = self.client_socket.recv(2048)
+                # print(data)
+                # print(len(data))
+                #cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
+                #encryptor_data = data + (pickle.dumps(cl))
+                #print(type(encryptor_data))
+                #print(len(encryptor_data))
+                if data:
+                    message = forward_to_subprocess(data, loginf, str(self.sid))
+                    
+                    time.sleep(1)
+                    self.client_socket.sendall(message)
+                    print("Login completed")
+                    self.sid += 1 
+                    break
+                
+                    # Send data to the server
+                    #message = input("Enter message to send to server: ")
+
+        except KeyboardInterrupt:
+            print("\nClient shutting down.")
+
+def forward_to_subprocess(serv_bytes, action, sid):
 
     #serv_params = server2.server_params()
     #serv_bytes = pickle.dumps(serv_params)
 
     # Start the subprocess (encryptor2.py)
     process = subprocess.Popen(
-        ['python3', 'encryptor2.py'],
+        ['python3', 'encryptor2.py', '-e', action, '-s', sid],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -89,59 +128,53 @@ def forward_to_subprocess():
 
 """   
 
+def run_login_experiments(cl, iter):
+    print(1)
+    pass
 
-
-def start_client():
-
-    serv_params = server2.server_params()
-    serv_bytes = pickle.dumps(serv_params)
-
-    # Set up the client
-    
-    i = 0
-
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect(('localhost', 12345))  # Connect to the server
-    
+def run_login_experiments_no_smuggle(cl, iter):
     try:
-        
-        while True and i<1:
+        cl.start_client()
+        for _ in range(iter):
+            cl.client_run_login(False)
+    except:
+        raise Exception("Error")
+    
 
-            # Receive data from the server
-            data = client_socket.recv(1024)
-            #cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
-            #encryptor_data = data + (pickle.dumps(cl))
-            #print(type(encryptor_data))
-            #print(len(encryptor_data))
-            if data:
-                #print(f"Received from server: {data.decode()}")
-                #print("Received from server: ", data)
-                #message = "lalaland"
-                print(len(data))
-                message = forward_to_subprocess(data)
-                
-                time.sleep(1)
-                client_socket.sendall(message)
-                print("Login completed")
-                #break
-            i+=1
-            
-                # Send data to the server
-                #message = input("Enter message to send to server: ")
-                
+def run_reenc_experiments(cl, iter):
+    print(3)
+    pass
 
-    except KeyboardInterrupt:
-        print("\nClient shutting down.")
-    finally:
-        client_socket.close()
+def run_action_experiments(cl, iter):
+    print(4)
+    pass
 
-   
+def run_history_experiments(cl, iter):
+    print(5)
+    pass 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Select experiment to run')
+    parser.add_argument('--experiment','-e', type=str, nargs=1)
+    parser.add_argument('--iterations','-i', type=int, nargs=1, default=1, 
+                        choices=range(1,101), help="Count of how many iterations.")
+   
+    args = parser.parse_args()
 
-    start_time = time.process_time()
+    csal_cl = CSALClient()
 
-    start_client()
+    if args.experiment[0] == "lns":
+        run_login_experiments_no_smuggle(csal_cl, args.iterations[0])
+    elif args.experiment[0] == "ls":
+        run_login_experiments(csal_cl, args.iterations[0])
+    elif args.experiment[0] == "a":
+        run_action_experiments(csal_cl, args.iterations[0])
+    elif args.experiment[0] == "r":
+        run_reenc_experiments(csal_cl, args.iterations[0])
+    elif args.experiment[0] == "h":
+        run_history_experiments(csal_cl, args.iterations[0])
+
+    # start_client()
     
     end_time = time.process_time()
     #simulator.run_in_terminal('python3 encryptor2.py')

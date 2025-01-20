@@ -15,7 +15,7 @@ import sys
 import time
 import sqlite3
 import server2
-
+import argparse
 
 #fetches data from both server and encryptor dbs
 def fetch_data(db_name, table_name, column_name):
@@ -43,34 +43,6 @@ def fetch_data(db_name, table_name, column_name):
 
     return column_data
 
-
-def insert_into_single_column(db_name, table_name, column_name, values):
-    """
-    Inserts values into a single column of the specified table in the SQLite database.
-
-    Parameters:
-    - db_name: The name of the SQLite database file.
-    - table_name: The name of the table where values will be inserted.
-    - column_name: The column name into which values will be inserted.
-    - values: A list or tuple of values to insert into the column.
-    """
-    # Connect to the SQLite database
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
-
-    # Prepare the SQL INSERT statement
-    sql = f"INSERT INTO {table_name} ({column_name}) VALUES (?)"
-
-    # Execute the INSERT statement for each value in the values list
-    for value in values:
-        cursor.execute(sql, (value,))
-
-    # Commit the transaction and close the connection
-    conn.commit()
-    conn.close()
-
-
-
 def run_in_terminal(command):
     # Get the current working directory (VS Code project directory)
     current_dir = os.getcwd()
@@ -93,18 +65,50 @@ def run_in_terminal(command):
         print("Unsupported OS")
 
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Select experiment to run')
+    parser.add_argument('--experiment','-e', type=str, nargs=1,
+                    help="Select which experiment to run. Select between \
+                            'login-no-smuggle', 'login-all', 'action', 'reenc', and 'history'.")
+    parser.add_argument('--iterations','-i', type=int, nargs=1, default=1, 
+                        choices=range(1,101), help="Count of how many iterations.")
 
+    args = parser.parse_args()
 
-def csal_login():
-    #pending
-    run_in_terminal('python server2.py')
-    time.sleep(2)
-    run_in_terminal('python client2.py')
+    if args.experiment[0] == "login-no-smuggle":
+        run_in_terminal('python server2.py' + f' -e lns -i {args.iterations[0]}')
+        time.sleep(2)
+        run_in_terminal('python client2.py' + f' -e lns -i {args.iterations[0]}')
+    elif args.experiment[0] == "login-all":
+        run_in_terminal('python server2.py' + f' -e ls -i {args.iterations[0]}')
+        time.sleep(2)
+        run_in_terminal('python client2.py' + f' -e ls -i {args.iterations[0]}')
+    elif args.experiment[0] == "action":
+        run_in_terminal('python server2.py' + f' -e a -i {args.iterations[0]}')
+        time.sleep(2)
+        run_in_terminal('python client2.py' + f' -e a -i {args.iterations[0]}')
+    elif args.experiment[0] == "reenc":
+        run_in_terminal('python server2.py' + f' -e r -i {args.iterations[0]}')
+        time.sleep(2)
+        run_in_terminal('python client2.py' + f' -e r -i {args.iterations[0]}')
+    elif args.experiment[0] == "history":
+        run_in_terminal('python server2.py' + f' -e h -i {args.iterations[0]}')
+        time.sleep(2)
+        run_in_terminal('python client2.py' + f' -e h -i {args.iterations[0]}')
+    else:
+        print(f"Option {args.experiment[0]} is not valid. \
+              Valid options are: 'login-no-smuggle', 'login-all', 'action', 'reenc', and 'history' (no quotation signs).")
     
 
 
-if __name__ == '__main__':
-   csal_login()
+
+
+
+    # run_in_terminal('python server2.py')
+    # time.sleep(2)
+    # run_in_terminal('python client2.py')
+
+
     #test1 = fetch_data('server.db', 'users', 'publicKeys')
     #test1 = str(test1)
     #print(type(test1))

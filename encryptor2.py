@@ -1,43 +1,31 @@
-import sys
-from pyhpke import AEADId, CipherSuite, KDFId, KEMId, KEMKey, KEMKeyPair, KEMInterface, KEMKeyInterface
-from cryptography.fernet import Fernet
-import subprocess 
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ec import (
-    EllipticCurvePrivateKey,
-    EllipticCurvePublicKey,
-)
-from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import serialization
-from random import randbytes
-import socket
-import json
+import argparse
 import ast
-
-import sqlite3
-from random import randbytes
-import os
-import errno
-import pickle  
-import ast
-from time import process_time
-import subprocess
-import sqlite3
-import simulator
-import random  
-import helpers
-import time
-import server2
-import uuid
 import base64
+import errno
+import json
+import os
+import pickle
+import random
+import socket
+import sqlite3
+import subprocess
+import sys
+import time
+import uuid
+from random import randbytes
+from time import process_time
 
+from cryptography.fernet import Fernet
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+from cryptography.hazmat.primitives.asymmetric.ec import (
+    EllipticCurvePrivateKey, EllipticCurvePublicKey)
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from pyhpke import (AEADId, CipherSuite, KDFId, KEMId, KEMInterface, KEMKey,
+                    KEMKeyInterface, KEMKeyPair)
 
-sessionId = random.randint(1, 10)
+import helpers
 
 def create_db_and_table(db_name):
     # Connect to the SQLite database (it will be created if it doesn't exist)
@@ -75,11 +63,9 @@ def process_data_encryptor():
     
     chall = randbytes(16)
     Ckem, Cdem = encrypt_csal()
-    sessID = server2.fetch_data('encryptor2.db', 'encryptor2', 'sid')
-    pk_payload = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
-    sign1 = [chall, sessID[0], pk_payload[0]]
-    sign1_pickled = pickle.dumps(sign1)
-    sign, pk_pem = generateSignature(sign1_pickled)
+    sessID = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
+    pk_payload = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
+    sign, certA = generateSignature(pickle.dumps([sessID[0], pk_payload[0]]))
 
     certA, sk = server2.generate_random_certificate()
     #sign = generateSignature(certA)
@@ -97,7 +83,7 @@ def process_data_client():
 
    # Read the message from stdin (in bytes)
     byte_message = sys.stdin.buffer.read()  # Read bytes from stdin #this is somehow string
- 
+    # print(len(byte_message))
     #print(type(byte_message))
     # Optionally print the raw byte message (for debugging)
     #print(f"Receiver (raw received bytes): {byte_message}")
@@ -129,20 +115,20 @@ def process_data_client():
     sys.stdout.flush()  # Ensure the response is flushed
 
 
-def insert_row_encryptor(db_name, table_name):
+def insert_row_encryptor(db_name, table_name, sid):
     """
     Insert a row into the specified SQLite table with generated sid and data.
     
     Args:
         db_name (str): The name of the SQLite database file.
         table_name (str): The name of the table into which data is being inserted.
+        sid (int): Session id.
     """
     try:
         # Generate a unique sid (primary key) using UUID
-        sid = randbytes(16)  # Generate a unique identifier for the sid
         user = "Bob"
         relyingParty = "facebook.com"
-        suiteEnc = generate_suite()
+        # suiteEnc = generate_suite()
         public, private, pk_bytes, sk_bytes = generate_key()
         symmK = generate_symmetric()
         #encap, sender = suiteEnc.create_sender_context(public)
@@ -217,14 +203,14 @@ def encrypt_csal():
     cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
     serial = serial + pickle.dumps(cl)
     enc_suite = generate_suite()
-    fetch1 = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
+    fetch1 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
     public = enc_suite.kem.deserialize_public_key(fetch1[0])
     encap, sender = enc_suite.create_sender_context(public)
     #helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)
-    #fetch3 = server2.fetch_data('encryptor2.db', 'encryptor2', 'encapKeys')
+    #fetch3 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'encapKeys')
 
 
-    fetch2 = server2.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
+    fetch2 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
     token = Fernet(fetch2[0])
     
     C_dem = token.encrypt(serial)
@@ -246,7 +232,7 @@ def encrypt_csal():
 def decrypt_csal(ciphertext):
 
     dec_suite = generate_suite()
-    fetch3 = server2.fetch_data('encryptor2.db', 'encryptor2', 'secretKeys')
+    fetch3 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'secretKeys')
     sk = dec_suite.kem.deserialize_private_key(fetch3[0])
     recipient = dec_suite.create_recipient_context(encap, sk)
 
@@ -357,90 +343,58 @@ def sign_verify(pk, signature, message):
     hashes.SHA256()
     )
 
-def generate_signature(blob):
+def run_login_no_smuggle(sid):
+    create_db_and_table('encryptor2.db')
+    insert_row_encryptor('encryptor2.db', 'encryptor2', sid)
+    process_data_client()
+    pass
 
-    cert, private_key = server2.generate_random_certificate()
-    
+def run_login_smuggle(sid):
+    create_db_and_table('encryptor2.db')
+    insert_row_encryptor('encryptor2.db', 'encryptor2', sid)
+    pass
 
-    signature = private_key.sign(
-        blob,
-        padding.PSS(
-             mgf=padding.MGF1(hashes.SHA256()),
-             salt_length=padding.PSS.MAX_LENGTH
-                 ),
-         hashes.SHA256()
-    )
+def run_action_experiments(sid):
+    pass
 
-    
-    #blob_bytes = bytearray()
-    #blob_bytes.extend(signature)
-    #blob_bytes.extend(blob)
-    
+def run_reenc_experiments(sid):
+    pass
 
-    return signature
+def run_history_experiments(sid):
+    pass
+
+
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Select experiment to run')
+    parser.add_argument('--experiment','-e', type=str, nargs=1)
+    parser.add_argument('--sessid','-s', type=int, nargs=1)
+
+    args = parser.parse_args()
+
+    if args.experiment[0] == "lns":
+        run_login_no_smuggle(args.sessid[0])
+    elif args.experiment[0] == "ls":
+        run_login_smuggle(args.sessid[0])
+    elif args.experiment[0] == "a":
+        run_action_experiments(args.sessid[0])
+    elif args.experiment[0] == "r":
+        run_reenc_experiments(args.sessid[0])
+    elif args.experiment[0] == "h":
+        run_history_experiments(args.sessid[0])
    
-    #create_db_and_table('encryptor2.db')
-    #insert_row_encryptor('encryptor2.db', 'encryptor2')
-    
-    #CDEM, CKEM = encrypt_csal()
-    #print(len(CDEM))
-    #print(len(CKEM))
+    # create_db_and_table('encryptor2.db')
+    # insert_row_encryptor('encryptor2.db', 'encryptor2')
+    # # print("inside encryptor")
+    # CDEM, CKEM = encrypt_csal()
+    # print(len(CDEM))
+    # print(len(CKEM))
 
-    
-    #generate_symmetric()
+    # generate_symmetric()
 
-    #process_data_client()
-
-    #ret = process_data_encryptor()
-    #print(ret[0])
-    #print(type(ret))
-    #ret_unpickle = pickle.loads(ret)
-    #print(ret_unpickle)
-    #print(type(ret_unpickle))
-    #print(len(ret_unpickle))
-    
-    start_time = time.process_time()
-
-    ckem, cdem = encrypt_csal()
-    
-    end_time = time.process_time()
-    cpu_time = end_time - start_time
-    print(f"CPU time used: {cpu_time} seconds")
-
+    # process_data_client()
+    #process_data_encryptor()
     """
-    -----
-    fetch2 = server2.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
-    print(fetch2[0])
-    print(len(fetch2[0]))
-
-    key = generate_symmetric()
-    f = Fernet(key)
-    print(len(key))
-    N = randbytes(16)
-    cold = f.encrypt(fetch2[0])
-    print(len(cold))
-
-
-    ckem, cdem, = encrypt_csal()
-    sign1, sign2, pkem = generateSignature_ciphertexts(ckem, cdem)
-    print(len(sign1))
-    print(len(sign2))
-    print(len(pkem))
-
-    certA, pkemm = server2.generate_random_certificate()
-    print(len(certA))
-    print(len(pkemm))
-
-    pk_fetch = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
-
-    blob = randbytes(16) + pk_fetch[0] + randbytes(16)
-    certg = generate_signature()
-    print(len(certg))
-
-     -------
-
     helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)
     suite = generate_suite()
     public, private = generate_key()
