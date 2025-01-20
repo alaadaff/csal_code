@@ -73,16 +73,18 @@ def process_data_encryptor():
     
     #generate encryptor params and forward to client
     
-    
+    chall = randbytes(16)
     Ckem, Cdem = encrypt_csal()
     sessID = server2.fetch_data('encryptor2.db', 'encryptor2', 'sid')
     pk_payload = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
-    sign, certA = generateSignature(pickle.dumps([sessID[0], pk_payload[0]]))
+    sign1 = [chall, sessID[0], pk_payload[0]]
+    sign1_pickled = pickle.dumps(sign1)
+    sign, pk_pem = generateSignature(sign1_pickled)
 
-    #certA = server2.generate_random_certificate()
+    certA, sk = server2.generate_random_certificate()
     #sign = generateSignature(certA)
 
-    encryptor_payload = [sessID[0], pk_payload[0], Ckem, Cdem, sign, certA]
+    encryptor_payload = [sessID[0], pk_payload[0], Ckem, Cdem, sign, certA, pk_pem, sign, sign]
     encryptor_payload_serialize = pickle.dumps(encryptor_payload)
 
     return encryptor_payload_serialize
@@ -95,7 +97,7 @@ def process_data_client():
 
    # Read the message from stdin (in bytes)
     byte_message = sys.stdin.buffer.read()  # Read bytes from stdin #this is somehow string
-    print(len(byte_message))
+ 
     #print(type(byte_message))
     # Optionally print the raw byte message (for debugging)
     #print(f"Receiver (raw received bytes): {byte_message}")
@@ -227,11 +229,16 @@ def encrypt_csal():
     
     C_dem = token.encrypt(serial)
    
+    
+
 
     #print(C_dem)
     #print("token type:", base64.urlsafe_b64decode(C_dem)[0])
     C_kem = sender.seal(fetch2[0])
     sender.seal(serial)
+
+
+
     
     return C_dem, C_kem
 
@@ -291,6 +298,52 @@ def generateSignature(blob):
     return signature, pem  
 
 
+# Function to generate digital signatures before sending data to the client
+def generateSignature_ciphertexts(c_kem, c_dem): 
+
+    #example of blob is: pk_sid - ctxt and pkset not included 
+
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+        backend=default_backend()
+    )
+
+
+    public_key = private_key.public_key()
+    
+
+    public_pem = public_key.public_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PublicFormat.SubjectPublicKeyInfo
+    #format=serialization.PublicFormat.OpenSSH
+    )
+
+
+    signature1 = private_key.sign(
+        c_kem,
+        padding.PSS(
+             mgf=padding.MGF1(hashes.SHA256()),
+             salt_length=padding.PSS.MAX_LENGTH
+                 ),
+         hashes.SHA256()
+    )
+    
+    signature2 = private_key.sign(
+        c_dem,
+        padding.PSS(
+             mgf=padding.MGF1(hashes.SHA256()),
+             salt_length=padding.PSS.MAX_LENGTH
+                 ),
+         hashes.SHA256()
+    )
+
+
+    #returns signature, the digital certificate in pem format and the corresponding public key 
+    #we can choose to include or not include the public key as it's supposedly already included in the PEM cert and can be extracted using openssl 
+    return signature1, signature2, public_pem  
+
+
 #verifies digital signature 
 def sign_verify(pk, signature, message):
     
@@ -304,22 +357,90 @@ def sign_verify(pk, signature, message):
     hashes.SHA256()
     )
 
+def generate_signature(blob):
 
+    cert, private_key = server2.generate_random_certificate()
+    
+
+    signature = private_key.sign(
+        blob,
+        padding.PSS(
+             mgf=padding.MGF1(hashes.SHA256()),
+             salt_length=padding.PSS.MAX_LENGTH
+                 ),
+         hashes.SHA256()
+    )
+
+    
+    #blob_bytes = bytearray()
+    #blob_bytes.extend(signature)
+    #blob_bytes.extend(blob)
+    
+
+    return signature
 
 if __name__ == "__main__":
    
     #create_db_and_table('encryptor2.db')
     #insert_row_encryptor('encryptor2.db', 'encryptor2')
     
-    CDEM, CKEM = encrypt_csal()
-    print(len(CDEM))
-    print(len(CKEM))
+    #CDEM, CKEM = encrypt_csal()
+    #print(len(CDEM))
+    #print(len(CKEM))
 
+    
     #generate_symmetric()
 
     #process_data_client()
-    #process_data_encryptor()
+
+    #ret = process_data_encryptor()
+    #print(ret[0])
+    #print(type(ret))
+    #ret_unpickle = pickle.loads(ret)
+    #print(ret_unpickle)
+    #print(type(ret_unpickle))
+    #print(len(ret_unpickle))
+    
+    start_time = time.process_time()
+
+    ckem, cdem = encrypt_csal()
+    
+    end_time = time.process_time()
+    cpu_time = end_time - start_time
+    print(f"CPU time used: {cpu_time} seconds")
+
     """
+    -----
+    fetch2 = server2.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
+    print(fetch2[0])
+    print(len(fetch2[0]))
+
+    key = generate_symmetric()
+    f = Fernet(key)
+    print(len(key))
+    N = randbytes(16)
+    cold = f.encrypt(fetch2[0])
+    print(len(cold))
+
+
+    ckem, cdem, = encrypt_csal()
+    sign1, sign2, pkem = generateSignature_ciphertexts(ckem, cdem)
+    print(len(sign1))
+    print(len(sign2))
+    print(len(pkem))
+
+    certA, pkemm = server2.generate_random_certificate()
+    print(len(certA))
+    print(len(pkemm))
+
+    pk_fetch = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
+
+    blob = randbytes(16) + pk_fetch[0] + randbytes(16)
+    certg = generate_signature()
+    print(len(certg))
+
+     -------
+
     helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)
     suite = generate_suite()
     public, private = generate_key()

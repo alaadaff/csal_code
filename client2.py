@@ -139,10 +139,14 @@ def start_client():
 
 if __name__ == '__main__':
 
+    start_time = time.process_time()
+
     start_client()
     
+    end_time = time.process_time()
     #simulator.run_in_terminal('python3 encryptor2.py')
-    
+    cpu_time = end_time - start_time
+    print(f"CPU time used: {cpu_time} seconds")
     #serv_params = server2.server_params()
     #serv_bytes = pickle.dumps(serv_params)
     #print(serv_bytes)

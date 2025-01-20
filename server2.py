@@ -305,9 +305,9 @@ def start_server():
             data = client_socket.recv(1024)
             if data:
                 #print(f"Received from client: {data.decode()}")
-                #print(data)
+                print(data)
                 #print(len(data))
-                insert_row_server('server.db', 'users', data)
+                #insert_row_server('server.db', 'users', data)
                 
                 #break
                 #break
@@ -329,9 +329,9 @@ def main():
     #parser.add_argument('message', type=str, help='Message to send to the client')
     #args = parser.parse_args()
    
+    start_server()
    
-   
-    
+    """
     #start_server()
     connection = sqlite3.connect('server.db')
 
@@ -358,7 +358,7 @@ def main():
     cursor.close()
     connection.close()
 
-  
+    """
     #sqlite3.connect('server.db').execute("INSERT INTO server (publicKeys) VALUES (?)", ('\x04e\xed\xa5\xa1%w\xc2\xba\xe8)C\x7f\xe38p\x1a',)).connection.commit()
 
 
