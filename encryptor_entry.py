@@ -1,9 +1,11 @@
-import encryptor2
-import server2
-import sqlite3 
-import random 
-from random import randbytes
+import random
+import sqlite3
 import sys
+from random import randbytes
+
+import encryptor2
+import helpers
+
 
 def insert_row_encryptor(db_name, table_name):
     """
@@ -52,13 +54,13 @@ def insert_row_encryptor(db_name, table_name):
 #encryptor2.create_db_and_table('encryptor2.db')
 #insert_row_encryptor('encryptor2.db', 'encryptor2')
 
-sid = server2.fetch_data('encryptor2.db', 'encryptor2', 'sid')
-user = server2.fetch_data('encryptor2.db', 'encryptor2', 'user')
-RP = server2.fetch_data('encryptor2.db', 'encryptor2', 'relyingParty')
-pk = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
-encap = server2.fetch_data('encryptor2.db', 'encryptor2', 'encapKeys')
-sk = server2.fetch_data('encryptor2.db', 'encryptor2', 'secretKeys')
-symmk = server2.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
+sid = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
+user = helpers.fetch_data('encryptor2.db', 'encryptor2', 'user')
+RP = helpers.fetch_data('encryptor2.db', 'encryptor2', 'relyingParty')
+pk = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
+encap = helpers.fetch_data('encryptor2.db', 'encryptor2', 'encapKeys')
+sk = helpers.fetch_data('encryptor2.db', 'encryptor2', 'secretKeys')
+symmk = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
 
 
 print(len(sid[0]))

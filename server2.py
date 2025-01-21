@@ -1,15 +1,15 @@
 import argparse
 import base64
 import datetime
+import os
 import pickle
 import random
 import secrets
 import socket
 import sqlite3
 import string
-import time
 import sys
-import os
+import time
 from random import randbytes
 
 import cryptography.x509
@@ -293,8 +293,8 @@ def main():
     #parser = argparse.ArgumentParser()
     #parser.add_argument('message', type=str, help='Message to send to the client')
     #args = parser.parse_args()
-   
-    start_server()
+    srv = CSALServer() 
+    srv.start_server()
    
     """
     #start_server()

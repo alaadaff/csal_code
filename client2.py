@@ -161,6 +161,7 @@ if __name__ == '__main__':
    
     args = parser.parse_args()
 
+    start_time = time.process_time()
     csal_cl = CSALClient()
 
     if args.experiment[0] == "lns":

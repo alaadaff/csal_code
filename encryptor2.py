@@ -26,6 +26,7 @@ from pyhpke import (AEADId, CipherSuite, KDFId, KEMId, KEMInterface, KEMKey,
                     KEMKeyInterface, KEMKeyPair)
 
 import helpers
+import server2
 
 def create_db_and_table(db_name):
     # Connect to the SQLite database (it will be created if it doesn't exist)
@@ -63,9 +64,11 @@ def process_data_encryptor():
     
     chall = randbytes(16)
     Ckem, Cdem = encrypt_csal()
-    sessID = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
-    pk_payload = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
-    sign, certA = generateSignature(pickle.dumps([sessID[0], pk_payload[0]]))
+    sessID = server2.fetch_data('encryptor2.db', 'encryptor2', 'sid')
+    pk_payload = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
+    sign1 = [chall, sessID[0], pk_payload[0]]
+    sign1_pickled = pickle.dumps(sign1)
+    sign, pk_pem = generateSignature(sign1_pickled)
 
     certA, sk = server2.generate_random_certificate()
     #sign = generateSignature(certA)
@@ -74,6 +77,7 @@ def process_data_encryptor():
     encryptor_payload_serialize = pickle.dumps(encryptor_payload)
 
     return encryptor_payload_serialize
+
 
   
 
@@ -229,17 +233,17 @@ def encrypt_csal():
     return C_dem, C_kem
 
 
-def decrypt_csal(ciphertext):
+# def decrypt_csal(ciphertext):
 
-    dec_suite = generate_suite()
-    fetch3 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'secretKeys')
-    sk = dec_suite.kem.deserialize_private_key(fetch3[0])
-    recipient = dec_suite.create_recipient_context(encap, sk)
+#     dec_suite = generate_suite()
+#     fetch3 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'secretKeys')
+#     sk = dec_suite.kem.deserialize_private_key(fetch3[0])
+#     recipient = dec_suite.create_recipient_context(encap, sk)
 
-    ptxt1 = recipient.open(C_kem)
-    ptxt2 = token.decrypt(C_dem)
+#     ptxt1 = recipient.open(C_kem)
+#     ptxt2 = token.decrypt(C_dem)
 
-    print(ptxt2)
+#     print(ptxt2)
 
 
 
@@ -329,6 +333,26 @@ def generateSignature_ciphertexts(c_kem, c_dem):
     #we can choose to include or not include the public key as it's supposedly already included in the PEM cert and can be extracted using openssl 
     return signature1, signature2, public_pem  
 
+def generate_signature(blob):
+
+    cert, private_key = server2.generate_random_certificate()
+    
+
+    signature = private_key.sign(
+        blob,
+        padding.PSS(
+             mgf=padding.MGF1(hashes.SHA256()),
+             salt_length=padding.PSS.MAX_LENGTH
+                 ),
+         hashes.SHA256()
+    )
+
+    
+    #blob_bytes = bytearray()
+    #blob_bytes.extend(signature)
+    #blob_bytes.extend(blob)
+
+    return signature
 
 #verifies digital signature 
 def sign_verify(pk, signature, message):
