@@ -16,13 +16,13 @@ class CSALClient():
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect(('localhost', 12345))  # Connect to the server
 
-    def client_run_login(self, smuggle=False):
+    def client_run_login(self, iter=1, smuggle=False):
         loginf = 'lns'
         if smuggle:
             loginf = 'ls'
         i = 0    
         try:
-            while True and i<4:
+            while True and i<iter:
                 
                 # Receive data from the server
                 data = self.client_socket.recv(2048)
@@ -140,7 +140,7 @@ def run_login_experiments_no_smuggle(cl, iter):
     try:
         cl.start_client()
         #for _ in range(iter):
-        cl.client_run_login(False)
+        cl.client_run_login(iter, False)
     except:
         raise Exception("Error")
     
