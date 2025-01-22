@@ -352,9 +352,9 @@ def run_login_experiments_no_smuggle(srv, iter):
     encryptor_sizes_log = []
     try:
         srv.start_server()
-        for i in range(iter):
-            print(f"Iteration {i}")
-            srv.server_run_login(times_log, server_sizes_log, encryptor_sizes_log, False)
+        #for i in range(iter):
+        #    print(f"Iteration {i}")
+        srv.server_run_login(times_log, server_sizes_log, encryptor_sizes_log, False)
     except:
         raise Exception("Error")
     finally:
