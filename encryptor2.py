@@ -367,10 +367,10 @@ def sign_verify(pk, signature, message):
     hashes.SHA256()
     )
 
-def run_login_no_smuggle(sid):
+def run_login_no_smuggle():
     create_db_and_table('encryptor2.db')
-    insert_row_encryptor('encryptor2.db', 'encryptor2', sid)
-    process_data_client()
+    #insert_row_encryptor('encryptor2.db', 'encryptor2', sid)
+    #process_data_client()
     pass
 
 def run_login_smuggle(sid):
@@ -392,12 +392,12 @@ def run_history_experiments(sid):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Select experiment to run')
     parser.add_argument('--experiment','-e', type=str, nargs=1)
-    parser.add_argument('--sessid','-s', type=int, nargs=1)
+    #parser.add_argument('--sessid','-s', type=int, nargs=1)
 
     args = parser.parse_args()
 
     if args.experiment[0] == "lns":
-        run_login_no_smuggle(args.sessid[0])
+        run_login_no_smuggle()
     elif args.experiment[0] == "ls":
         run_login_smuggle(args.sessid[0])
     elif args.experiment[0] == "a":

@@ -30,7 +30,7 @@ class CSALServer():
     def __init__(self):
         self.db_name = 'server.db'
         self.certificate = None
-        self.sk = None
+        self.cert_sk = None
         self.server_socket = None
         self.client_socket = None
 
@@ -41,6 +41,7 @@ class CSALServer():
         self.create_db_and_table()
         
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow port reuse
         self.server_socket.bind(('localhost', 12345))  # Binding to localhost on port 12345
         self.server_socket.listen(4)  # Listen for one client connection
 
@@ -51,7 +52,7 @@ class CSALServer():
         self.client_socket, client_address = self.server_socket.accept()
         print(f"Connection established with {client_address}")
 
-        self.certificate, self.sk = generate_random_certificate()
+        self.certificate, self.cert_sk = generate_random_certificate()
 
 
     def create_db_and_table(self):
@@ -75,9 +76,6 @@ class CSALServer():
         )
         ''')
 
-        #Try insert into db
-        #cursor.execute("INSERT INTO server (publicKeys) VALUES (?)", ('\x04e\xed\xa5\xa1%w\xc2\xba\xe8)C\x7f\xe38p\x1a',))
-
         # Commit the changes and close the connection
         conn.commit()
         conn.close()
@@ -89,7 +87,7 @@ class CSALServer():
         Args:
             
             table_name (str): The name of the table into which data is being inserted.
-            pickled_data : data to add to the table
+            pickled_data : data to add to the table in pickled format
         """
         userid = random.randint(1, 9999)
         data = pickle.loads(pickled_data)
@@ -125,17 +123,15 @@ class CSALServer():
             # Close the connection to the database
             conn.close()
 
+
     def server_params_login(self):
 
         challenge = str(randbytes(16))
         cookie = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8')
-        #PK = fetch_data('server.db', 'users', 'publicKeys') #pulled from db
-        #tKEM = fetch_data('server.db', 'users', 'ciphertexts') #pulled from db
         keyParams = [{"key_params": "public-key", "alg": -7}]
         publicKeys = helpers.fetch_data('server.db', 'users', 'publicKeys')
-        #tKEM = fetch_data('server.db', 'users', 'CKEMs')
-        #server_payload = [challenge, cookie, PK, tKEM, keyParams]
-        server_payload = [challenge, cookie, keyParams, publicKeys]
+        tKEM = helpers.fetch_data('server.db', 'users', 'CKEMs')
+        server_payload = [challenge, cookie, keyParams, publicKeys, tKEM]
         # print(server_payload)
 
         return server_payload
@@ -144,7 +140,7 @@ class CSALServer():
         # Create params for a new session [N, cookie_tmp, params, PKs, certRP, sigma]
         t0 = time.time()
         blob = self.server_params_login()
-        servPayload, sigma = generate_signature(self.certificate, self.sk, blob)
+        servPayload, sigma = generate_signature(self.certificate, self.cert_sk, blob)
         all_payload = servPayload + sigma 
         log_s.append(len(all_payload))
         try:
@@ -186,6 +182,8 @@ class CSALServer():
         except KeyboardInterrupt:
             print("\nServer shutting down.")
 
+        self.client_socket.close()
+        self.server_socket.close()
 
 #function to create random RP certs and signature 
 def generate_random_string(length=10):
@@ -289,12 +287,12 @@ def generate_signature(cert, sk, blob):
 
     return blob, signature
 
-def main():
+#def main():
     #parser = argparse.ArgumentParser()
     #parser.add_argument('message', type=str, help='Message to send to the client')
     #args = parser.parse_args()
-    srv = CSALServer() 
-    srv.start_server()
+#    srv = CSALServer() 
+#    srv.start_server()
    
     """
     #start_server()

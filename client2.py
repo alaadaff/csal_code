@@ -10,7 +10,7 @@ from subprocess import PIPE, Popen
 class CSALClient():
     def __init__(self):
         self.client_socket = None
-        self.sid = 0
+        #self.sid = 0
 
     def start_client(self):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -33,12 +33,12 @@ class CSALClient():
                 #print(type(encryptor_data))
                 #print(len(encryptor_data))
                 if data:
-                    message = forward_to_subprocess(data, loginf, str(self.sid))
-                    
+                    message = forward_to_subprocess(data, loginf)
+                    #message = b'helllooo'
                     time.sleep(1)
                     self.client_socket.sendall(message)
                     print("Login completed")
-                    self.sid += 1 
+                    #self.sid += 1 
                     break
                 
                     # Send data to the server
@@ -46,15 +46,16 @@ class CSALClient():
 
         except KeyboardInterrupt:
             print("\nClient shutting down.")
+            self.client_socket.close()
 
-def forward_to_subprocess(serv_bytes, action, sid):
+def forward_to_subprocess(serv_bytes, action):
 
     #serv_params = server2.server_params()
     #serv_bytes = pickle.dumps(serv_params)
 
     # Start the subprocess (encryptor2.py)
     process = subprocess.Popen(
-        ['python3', 'encryptor2.py', '-e', action, '-s', sid],
+        ['python3', 'encryptor2.py', '-e', action],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
