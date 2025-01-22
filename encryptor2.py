@@ -370,21 +370,23 @@ def sign_verify(pk, signature, message):
 def run_login_no_smuggle():
     create_db_and_table('encryptor2.db')
     #insert_row_encryptor('encryptor2.db', 'encryptor2', sid)
-    #process_data_client()
-    pass
+    print("here")
+    process_data_client()
+    print("And here too..")
 
-def run_login_smuggle(sid):
+
+def run_login_smuggle():
     create_db_and_table('encryptor2.db')
-    insert_row_encryptor('encryptor2.db', 'encryptor2', sid)
+    insert_row_encryptor('encryptor2.db', 'encryptor2')
     pass
 
-def run_action_experiments(sid):
+def run_action_experiments():
     pass
 
-def run_reenc_experiments(sid):
+def run_reenc_experiments():
     pass
 
-def run_history_experiments(sid):
+def run_history_experiments():
     pass
 
 
@@ -396,16 +398,16 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.experiment[0] == "lns":
+    if args.experiment == "lns":
         run_login_no_smuggle()
-    elif args.experiment[0] == "ls":
-        run_login_smuggle(args.sessid[0])
-    elif args.experiment[0] == "a":
-        run_action_experiments(args.sessid[0])
-    elif args.experiment[0] == "r":
-        run_reenc_experiments(args.sessid[0])
-    elif args.experiment[0] == "h":
-        run_history_experiments(args.sessid[0])
+    elif args.experiment == "ls":
+        run_login_smuggle()
+    elif args.experiment == "a":
+        run_action_experiments()
+    elif args.experiment == "r":
+        run_reenc_experiments()
+    elif args.experiment == "h":
+        run_history_experiments()
    
     # create_db_and_table('encryptor2.db')
     # insert_row_encryptor('encryptor2.db', 'encryptor2')

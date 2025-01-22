@@ -43,7 +43,7 @@ class CSALServer():
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allow port reuse
         self.server_socket.bind(('localhost', 12345))  # Binding to localhost on port 12345
-        self.server_socket.listen(4)  # Listen for one client connection
+        self.server_socket.listen(1)  # Listen for one client connection
 
         print("Server is listening for incoming connections...")
 
@@ -144,8 +144,12 @@ class CSALServer():
         all_payload = servPayload + sigma 
         log_s.append(len(all_payload))
         try:
-            self.client_socket.sendall(all_payload)
+
+            #self.client_socket.sendall(all_payload)
+            
             while True:
+                send = b'sending...'
+                self.client_socket.sendall(send)
                 # Receive data from the client
                 #data = client_socket.recv(1024)
                 #if not data:
@@ -165,25 +169,25 @@ class CSALServer():
                 # all_payload2 = servPayload + sigma + pickle.dumps(cl)
                 # self.client_socket.sendall(all_payload)
                 data = self.client_socket.recv(2048)
+                if not data:
+                    print("Client disconnected.")
+                    #break  # Exit loop if client disconnects
                 if data:
-                    #print(f"Received from client: {data.decode()}")
-                    #print(data)
-                    # print(len(data))
-                    self.insert_row_server('users', data)
-                    #break
-                    #break
+                    #self.insert_row_server('users', data)
+                    print("Data received from client")
                     t1 = time.time()
                     log_e.append(len(data))
-                
-                    break
-                #else:
-                #    break
-            tlog.append(t1-t0-1)
+                    #break
+                    
+            
+                    #else:
+                    #    break
+                tlog.append(t1-t0-1)
         except KeyboardInterrupt:
             print("\nServer shutting down.")
-
-        self.client_socket.close()
-        self.server_socket.close()
+        finally:
+            self.client_socket.close()
+            self.server_socket.close()
 
 #function to create random RP certs and signature 
 def generate_random_string(length=10):
@@ -382,8 +386,8 @@ def run_history_experiments(srv, iter):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Select experiment to run')
-    parser.add_argument('--experiment','-e', type=str, nargs=1)
-    parser.add_argument('--iterations','-i', type=int, nargs=1, default=1, 
+    parser.add_argument('--experiment','-e', type=str, required=True, help="Experiment to run.")
+    parser.add_argument('--iterations','-i', type=int, default=1, 
                         choices=range(1,101), help="Count of how many iterations.")
    
     args = parser.parse_args()
@@ -391,16 +395,16 @@ if __name__ == '__main__':
 
     csal_srv = CSALServer()
 
-    if args.experiment[0] == "lns":
-        run_login_experiments_no_smuggle(csal_srv, args.iterations[0])
-    elif args.experiment[0] == "ls":
-        run_login_experiments(csal_srv, args.iterations[0])
-    elif args.experiment[0] == "a":
-        run_action_experiments(csal_srv, args.iterations[0])
-    elif args.experiment[0] == "r":
-        run_reenc_experiments(csal_srv, args.iterations[0])
-    elif args.experiment[0] == "h":
-        run_history_experiments(csal_srv, args.iterations[0])
+    if args.experiment == "lns":
+        run_login_experiments_no_smuggle(csal_srv, args.iterations)
+    elif args.experiment == "ls":
+        run_login_experiments(csal_srv, args.iterations)
+    elif args.experiment == "a":
+        run_action_experiments(csal_srv, args.iterations)
+    elif args.experiment == "r":
+        run_reenc_experiments(csal_srv, args.iterations)
+    elif args.experiment == "h":
+        run_history_experiments(csal_srv, args.iterations)
    
 #    main()
 

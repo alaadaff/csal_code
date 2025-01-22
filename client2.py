@@ -20,12 +20,13 @@ class CSALClient():
         loginf = 'lns'
         if smuggle:
             loginf = 'ls'
+        i = 0    
         try:
-            
-            while True:
-
+            while True and i<4:
+                
                 # Receive data from the server
                 data = self.client_socket.recv(2048)
+                time.sleep(1)
                 # print(data)
                 # print(len(data))
                 #cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
@@ -33,19 +34,21 @@ class CSALClient():
                 #print(type(encryptor_data))
                 #print(len(encryptor_data))
                 if data:
-                    message = forward_to_subprocess(data, loginf)
-                    #message = b'helllooo'
+                    #message = forward_to_subprocess(data, loginf)
+                    message = b'helllooo'
                     time.sleep(1)
                     self.client_socket.sendall(message)
+                    print(message)
                     print("Login completed")
                     #self.sid += 1 
-                    break
+                    #break
                 
                     # Send data to the server
                     #message = input("Enter message to send to server: ")
-
+                i+=1
         except KeyboardInterrupt:
             print("\nClient shutting down.")
+        finally:
             self.client_socket.close()
 
 def forward_to_subprocess(serv_bytes, action):
@@ -136,8 +139,8 @@ def run_login_experiments(cl, iter):
 def run_login_experiments_no_smuggle(cl, iter):
     try:
         cl.start_client()
-        for _ in range(iter):
-            cl.client_run_login(False)
+        #for _ in range(iter):
+        cl.client_run_login(False)
     except:
         raise Exception("Error")
     
@@ -156,8 +159,8 @@ def run_history_experiments(cl, iter):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Select experiment to run')
-    parser.add_argument('--experiment','-e', type=str, nargs=1)
-    parser.add_argument('--iterations','-i', type=int, nargs=1, default=1, 
+    parser.add_argument('--experiment','-e', type=str, required=True, help="Experiment to run.")
+    parser.add_argument('--iterations','-i', type=int, default=1, 
                         choices=range(1,101), help="Count of how many iterations.")
    
     args = parser.parse_args()
@@ -165,16 +168,16 @@ if __name__ == '__main__':
     start_time = time.process_time()
     csal_cl = CSALClient()
 
-    if args.experiment[0] == "lns":
-        run_login_experiments_no_smuggle(csal_cl, args.iterations[0])
-    elif args.experiment[0] == "ls":
-        run_login_experiments(csal_cl, args.iterations[0])
-    elif args.experiment[0] == "a":
-        run_action_experiments(csal_cl, args.iterations[0])
-    elif args.experiment[0] == "r":
-        run_reenc_experiments(csal_cl, args.iterations[0])
-    elif args.experiment[0] == "h":
-        run_history_experiments(csal_cl, args.iterations[0])
+    if args.experiment == "lns":
+        run_login_experiments_no_smuggle(csal_cl, args.iterations)
+    elif args.experiment == "ls":
+        run_login_experiments(csal_cl, args.iterations)
+    elif args.experiment == "a":
+        run_action_experiments(csal_cl, args.iterations)
+    elif args.experiment == "r":
+        run_reenc_experiments(csal_cl, args.iterations)
+    elif args.experiment == "h":
+        run_history_experiments(csal_cl, args.iterations)
 
     # start_client()
     
