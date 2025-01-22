@@ -36,7 +36,7 @@ class CSALClient():
                 if data:
                     #message = forward_to_subprocess(data, loginf)
                     message = b'helllooo'
-                    time.sleep(1)
+                    #time.sleep(1)
                     self.client_socket.sendall(message)
                     print(message)
                     print("Login completed")

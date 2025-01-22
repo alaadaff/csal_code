@@ -171,7 +171,7 @@ class CSALServer():
                 data = self.client_socket.recv(2048)
                 if not data:
                     print("Client disconnected.")
-                    #break  # Exit loop if client disconnects
+                    break  # Exit loop if client disconnects
                 if data:
                     #self.insert_row_server('users', data)
                     print("Data received from client")
@@ -183,6 +183,10 @@ class CSALServer():
                     #else:
                     #    break
                 tlog.append(t1-t0-1)
+
+        except ConnectionResetError:
+            print("Connection reset by peer. Client closed the connection unexpectedly.")
+            #break  # Exit the loop gracefully
         except KeyboardInterrupt:
             print("\nServer shutting down.")
         finally:
