@@ -30,6 +30,9 @@ def forward_to_subprocess(serv_bytes, action):
     # Use communicate() to send and receive data
     stdout, stderr = process.communicate(input=serv_bytes)  # Automatically flushes stdin and reads stdout
 
+    if stdout:
+        print("Subprocess Output:\n", stdout)
+
     """
     # Print the received response (stdout)
     if stdout:
@@ -57,7 +60,7 @@ class CSALClient():
         self.client_socket.connect(('localhost', 12345))  # Connect to the server
 
     def client_run_login(self, iter=1, smuggle=False):
-        loginf = 'lns'
+        loginf = 'h'
         if smuggle:
             loginf = 'ls'
         i = 0    
@@ -71,9 +74,6 @@ class CSALClient():
                 data_encryptor = pickle.dumps(data_cl)
                 if data:
                     message = forward_to_subprocess(data_encryptor, loginf)
-                    #unpi = pickle.loads(message)
-                    #print(unpi)
-                    #print(len(unpi))
                     self.client_socket.sendall(message)
                     print("Login completed")
                     #self.sid += 1 
@@ -154,8 +154,13 @@ def run_action_experiments(cl, iter):
     pass
 
 def run_history_experiments(cl, iter):
-    print(5)
-    pass 
+    try:
+        cl.start_client()
+        #for _ in range(iter):
+        cl.client_run_login(iter, False)
+    except:
+        raise Exception("Error")
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Select experiment to run')

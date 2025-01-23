@@ -133,7 +133,8 @@ class CSALServer():
         publicKeys = helpers.fetch_data('server.db', 'users', 'publicKeys')
         tKEM = helpers.fetch_data('server.db', 'users', 'CKEMs')
         sessid = helpers.fetch_data('server.db', 'users', 'sid')
-        server_payload = [challenge, cookie, keyParams, publicKeys, tKEM, sessid]
+        tDEM = helpers.fetch_data('server.db', 'users', 'CDEMs')
+        server_payload = [challenge, cookie, keyParams, publicKeys, tKEM, sessid, tDEM]
         # print(server_payload)
 
         return server_payload
@@ -141,10 +142,10 @@ class CSALServer():
     def server_run_login(self, tlog, log_s, log_e, smuggle=False):
         # Create params for a new session [N, cookie_tmp, params, PKs, certRP, sigma]
         t0 = time.time()
-        blob = self.server_params_login()
-        servPayload, sigma = generate_signature(self.certificate, self.cert_sk, blob)
-        all_payload = pickle.dumps([servPayload, sigma]) 
-        log_s.append(len(all_payload))
+        #blob = self.server_params_login()
+        #servPayload, sigma = generate_signature(self.certificate, self.cert_sk, blob)
+        #all_payload = pickle.dumps([servPayload, sigma]) 
+        #log_s.append(len(all_payload))
       
         try:
 
@@ -153,7 +154,13 @@ class CSALServer():
             while True:
                 #send = b'sending...'
                 try:
+                    blob = self.server_params_login()
+                    servPayload, sigma = generate_signature(self.certificate, self.cert_sk, blob)
+                    all_payload = pickle.dumps([servPayload, sigma]) 
                     self.client_socket.sendall(all_payload)
+                    pl1 = pickle.loads(all_payload)
+                    pl2 = pickle.loads(pl1[0])
+                    print(pl2)
                     time.sleep(1)
                 except BrokenPipeError:
                     print("Broken pipe: Client is no longer connected. Closing socket.")
@@ -174,7 +181,7 @@ class CSALServer():
                 tlog.append(t1-t0-1)
 
         except ConnectionResetError:
-            print("Connection reset by peer. Client closed the connection unexpectedly.")
+            print("CSAL login completed")
             #break  # Exit the loop gracefully
         except KeyboardInterrupt:
             print("\nServer shutting down.")
@@ -359,8 +366,8 @@ def run_login_experiments_no_smuggle(srv, iter):
             srv.client_socket.close()
         if srv.server_socket != None:
             srv.server_socket.close()
-        os.system(f'rm {srv.db_name}')
-        os.system(f'rm encryptor2.db')
+        #os.system(f'rm {srv.db_name}')
+        #os.system(f'rm encryptor2.db')
         print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
         print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
         print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")
@@ -374,8 +381,26 @@ def run_action_experiments(srv, iter):
     pass
 
 def run_history_experiments(srv, iter):
-    print(5)
-    pass
+    times_log = []
+    server_sizes_log = []
+    encryptor_sizes_log = []
+    try:
+        srv.start_server()
+        #for i in range(iter):
+        #    print(f"Iteration {i}")
+        srv.server_run_login(times_log, server_sizes_log, encryptor_sizes_log, False)
+    except:
+        raise Exception("Error")
+    finally:
+        if srv.client_socket != None:
+            srv.client_socket.close()
+        if srv.server_socket != None:
+            srv.server_socket.close()
+        os.system(f'rm {srv.db_name}')
+        os.system(f'rm encryptor2.db')
+        print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
+        print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
+        print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Select experiment to run')
