@@ -71,6 +71,9 @@ class CSALClient():
                 data_encryptor = pickle.dumps(data_cl)
                 if data:
                     message = forward_to_subprocess(data_encryptor, loginf)
+                    #unpi = pickle.loads(message)
+                    #print(unpi)
+                    #print(len(unpi))
                     self.client_socket.sendall(message)
                     print("Login completed")
                     #self.sid += 1 

@@ -99,7 +99,7 @@ def insert_row_encryptor(db_name, table_name):
         # Close the connection to the database
         conn.close()
 
-def process_data_encryptor_encrypt(chall, publicKeys, tKems, session):
+def process_data_encryptor_encrypt(chall, publicKeys=[], tKems=[], session=[]):
 
     #process data received from server and extract set of public keys
     
@@ -147,6 +147,7 @@ def process_data_client():
             unpickle = pickle.loads(byte_message)
             serv_payld = unpickle[0]
             cl = unpickle[1]
+        
             #print("Decoded message:", unpickle, flush=True)
             server_payload = pickle.loads(serv_payld) # [0] is payload & [1] is sigma
             #sigma_server = unpickle[1]
@@ -154,9 +155,12 @@ def process_data_client():
             server_payload1 = server_payload[0]
             server_payload1_unpickled = pickle.loads(server_payload1)
             #print(server_payload1_unpickled)
+            #print(server_payload1_unpickled)
             challenge_server = server_payload1_unpickled[0]
             pks = server_payload1_unpickled[3]
+            
             tkems = server_payload1_unpickled[4]
+            
             session_id = server_payload1_unpickled[5]
 
         except pickle.UnpicklingError as e:
@@ -184,7 +188,7 @@ def process_data_client():
     sys.stdout.buffer.write(response)  # Write response as bytes
     sys.stdout.flush()  # Ensure the response is flushed
 
-    return pks, tkems, session_id
+    #return pks, tkems, session_id
 
 
 
@@ -227,14 +231,35 @@ def generate_key():
     return pk, sk, pk_serialize, sk_serialize
 
 
-def encrypt_csal(publicKeys, session):
+
+def encrypt_csal(publicKeys=[], session=[]):
 
     kems = []
     dems = []
 
     enc_suite = generate_suite()
     serial = getSerial()
-    if publicKeys and session:
+
+    if len(publicKeys) == 0 and len(session)== 0: #first csal login
+        print("This is the first CSAL login!")
+        fetch1 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
+        fetch_sid = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
+        public = enc_suite.kem.deserialize_public_key(fetch1[0])
+        encap, sender = enc_suite.create_sender_context(public)
+        helpers.update_row('encryptor2.db', 'encryptor2', 'sid', fetch_sid[0], {"encapKeys":encap})
+        fetch2 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
+        print(fetch2)
+        token = Fernet(fetch2[0])
+    
+        C_dem = token.encrypt(serial)
+        
+        C_kem = sender.seal(fetch2[0])
+        
+        kems.append(C_kem)
+        dems.append(C_dem)
+       
+
+    if len(publicKeys)>0 and len(session)>0:
         size_of_keys = len(publicKeys)
         for i in range(size_of_keys):
             pk = enc_suite.kem.deserialize_public_key(publicKeys[i])
@@ -247,18 +272,8 @@ def encrypt_csal(publicKeys, session):
             C_kem = sender.seal(row[5])
             kems = kems.append(C_kem)
     
-    else: #this is the first CSAL login
-        fetch1 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
-        public = enc_suite.kem.deserialize_public_key(fetch1[0])
-        encap, sender = enc_suite.create_sender_context(public)
-        fetch2 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
-        token = Fernet(fetch2[0])
-    
-        C_dem = token.encrypt(serial)
-        C_kem = sender.seal(fetch2[0])
-        sender.seal(serial)
-        kems = kems.append(C_kem)
-        dems = dems.append(C_dem)
+
+        
     #cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
     #serial = serial + pickle.dumps(cl)
     

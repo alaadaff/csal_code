@@ -80,7 +80,7 @@ class CSALServer():
         conn.commit()
         conn.close()
 
-    def insert_row_server(self, table_name, pickled_data):
+    def insert_row_server(self, table_name, pickled_data, i):
         """
         Insert a row into the specified SQLite table with generated sid and data.
         
@@ -92,10 +92,11 @@ class CSALServer():
         userid = random.randint(1, 9999)
         data = pickle.loads(pickled_data)
         user = "Alice"
-        sid = data[0]
-        publicK = data[1]
-        ckem = data[2]
-        cdem = data[3]
+        sid = data[0][i]
+        publicK = data[1][i]
+        ckem = data[2][0]
+        cdem = data[3][0]
+
         try:
             
             # Connect to the SQLite database
@@ -148,7 +149,7 @@ class CSALServer():
         try:
 
             #self.client_socket.sendall(all_payload)
-            
+            count=0
             while True:
                 #send = b'sending...'
                 try:
@@ -163,13 +164,12 @@ class CSALServer():
                     print("Client disconnected.")
                     break  # Exit loop if client disconnects
                 if data:
-                    #self.insert_row_server('users', data)
-                    dat = pickle.loads(data)
-                    print(dat)
+                    print(pickle.loads(data))
+                    self.insert_row_server('users', data, count)
                     t1 = time.time()
                     log_e.append(len(data))
                     #break
-                    
+                count+=1   
 
                 tlog.append(t1-t0-1)
 
@@ -337,8 +337,8 @@ def run_login_experiments(srv, iter):
             srv.client_socket.close()
         if srv.server_socket != None:
             srv.server_socket.close()
-        os.system(f'rm {srv.db_name}')
-        os.system(f'rm encryptor2.db')
+        #os.system(f'rm {srv.db_name}')
+        #os.system(f'rm encryptor2.db')
         print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
         print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
         print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")
@@ -359,7 +359,7 @@ def run_login_experiments_no_smuggle(srv, iter):
             srv.client_socket.close()
         if srv.server_socket != None:
             srv.server_socket.close()
-        os.system(f'rm {srv.db_name}')
+        #os.system(f'rm {srv.db_name}')
         #os.system(f'rm encryptor2.db')
         print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
         print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
