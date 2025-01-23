@@ -268,9 +268,10 @@ def encrypt_csal(publicKeys=[], session=[]):
             row = helpers.fetch_row_by_primary_key('encryptor2.db', 'encryptor2', 'sid', session[i])
             token = Fernet(row[5])
             C_dem = token.encrypt(serial)
-            dems = dems.append(C_dem)
+            dems.append(C_dem)
             C_kem = sender.seal(row[5])
-            kems = kems.append(C_kem)
+            kems.append(C_kem)
+            
     
 
         
@@ -440,8 +441,7 @@ def run_login_no_smuggle():
     create_db_and_table('encryptor2.db')
     insert_row_encryptor('encryptor2.db', 'encryptor2')
     process_data_client() #this should be list [servPayload, sigma] 
-    #print(byt) 
-    #print(type(byt))
+  
 
 
 def run_login_smuggle():

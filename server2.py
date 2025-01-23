@@ -164,7 +164,7 @@ class CSALServer():
                     print("Client disconnected.")
                     break  # Exit loop if client disconnects
                 if data:
-                    print(pickle.loads(data))
+                    #print(pickle.loads(data))
                     self.insert_row_server('users', data, count)
                     t1 = time.time()
                     log_e.append(len(data))
@@ -337,8 +337,8 @@ def run_login_experiments(srv, iter):
             srv.client_socket.close()
         if srv.server_socket != None:
             srv.server_socket.close()
-        #os.system(f'rm {srv.db_name}')
-        #os.system(f'rm encryptor2.db')
+        os.system(f'rm {srv.db_name}')
+        os.system(f'rm encryptor2.db')
         print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
         print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
         print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")
@@ -359,8 +359,8 @@ def run_login_experiments_no_smuggle(srv, iter):
             srv.client_socket.close()
         if srv.server_socket != None:
             srv.server_socket.close()
-        #os.system(f'rm {srv.db_name}')
-        #os.system(f'rm encryptor2.db')
+        os.system(f'rm {srv.db_name}')
+        os.system(f'rm encryptor2.db')
         print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
         print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
         print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")
