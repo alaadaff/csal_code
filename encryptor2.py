@@ -55,71 +55,7 @@ def create_db_and_table(db_name):
     conn.commit()
     conn.close()
 
-
-def process_data_encryptor():
-
-    #process data received from server and extract set of public keys
-    
-    #generate encryptor params and forward to client
-    
-    chall = randbytes(16)
-    Ckem, Cdem = encrypt_csal()
-    sessID = server2.fetch_data('encryptor2.db', 'encryptor2', 'sid')
-    pk_payload = server2.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
-    sign1 = [chall, sessID[0], pk_payload[0]]
-    sign1_pickled = pickle.dumps(sign1)
-    sign, pk_pem = generateSignature(sign1_pickled)
-
-    certA, sk = server2.generate_random_certificate()
-    #sign = generateSignature(certA)
-
-    encryptor_payload = [sessID[0], pk_payload[0], Ckem, Cdem, sign, certA, pk_pem, sign, sign]
-    encryptor_payload_serialize = pickle.dumps(encryptor_payload)
-
-    return encryptor_payload_serialize
-
-
-  
-
-
-# Function to process data sent from client via pipes 
-def process_data_client():
-
-   # Read the message from stdin (in bytes)
-    byte_message = sys.stdin.buffer.read()  # Read bytes from stdin #this is somehow string
-    # print(len(byte_message))
-    #print(type(byte_message))
-    # Optionally print the raw byte message (for debugging)
-    #print(f"Receiver (raw received bytes): {byte_message}")
-    #print(type(byte_message))
-    # Decode the byte message to string for processing
-    #message = byte_message.decode('utf-8')
-    """
-    if byte_message:
-        message = pickle.loads(byte_message)
-        #function to process received message 
-
-        print(message[0])
-    """
-    
-    # Print the received message in the receiver's terminal
-    #print(f"Receiver (received): {message}")
-    
-    # Process the message and create a response - response has to be in string format
-    #response = f"Processed: {pickle.loads(message)}"
-    #response = f"Processed: {message}"
-    response = process_data_encryptor()
-
-    # Print the response in receiver's terminal
-    #print(f"Receiver (response): {response}")
-    
-    # Convert the response to bytes and send it back to sender's stdout
-    #sys.stdout.write(response.encode('utf-8') + b'\n')  # Write response as bytes
-    sys.stdout.buffer.write(response)  # Write response as bytes
-    sys.stdout.flush()  # Ensure the response is flushed
-
-
-def insert_row_encryptor(db_name, table_name, sid):
+def insert_row_encryptor(db_name, table_name):
     """
     Insert a row into the specified SQLite table with generated sid and data.
     
@@ -129,7 +65,8 @@ def insert_row_encryptor(db_name, table_name, sid):
         sid (int): Session id.
     """
     try:
-        # Generate a unique sid (primary key) using UUID
+        # Generate a unique sid (primary key) using randbytes
+        sid = randbytes(16)
         user = "Bob"
         relyingParty = "facebook.com"
         # suiteEnc = generate_suite()
@@ -161,6 +98,95 @@ def insert_row_encryptor(db_name, table_name, sid):
     finally:
         # Close the connection to the database
         conn.close()
+
+def process_data_encryptor_encrypt(chall, publicKeys, tKems, session):
+
+    #process data received from server and extract set of public keys
+    
+    #generate encryptor params and forward to client
+    
+    Ckem, Cdem = encrypt_csal(publicKeys, session)
+    sessID = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
+    pk_payload = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
+    sign1 = [chall, sessID, pk_payload]
+    sign1_pickled = pickle.dumps(sign1)
+    sign, pk_pem = generateSignature(sign1_pickled)
+
+    certA, sk = server2.generate_random_certificate()
+    #sign = generateSignature(certA)
+
+    encryptor_payload = [sessID, pk_payload, Ckem, Cdem, sign, certA, pk_pem, sign, sign]
+    encryptor_payload_serialize = pickle.dumps(encryptor_payload)
+
+    return encryptor_payload_serialize
+
+
+  
+def parse_data(pickled_client):
+    unpickled = pickle.loads(pickled_client)
+    print(unpickled)
+    print(type(unpickled))
+
+    return unpickled
+
+# Function to process data sent from client via pipes 
+def process_data_client():
+
+   # Read the message from stdin (in bytes)
+    try:
+        byte_message = sys.stdin.buffer.read()
+        #print("Received byte message:", byte_message, flush=True)
+    except Exception as e:
+        print(f"Error occurred: {e}", flush=True)
+
+
+    if byte_message:
+
+        try:
+
+            unpickle = pickle.loads(byte_message)
+            serv_payld = unpickle[0]
+            cl = unpickle[1]
+            #print("Decoded message:", unpickle, flush=True)
+            server_payload = pickle.loads(serv_payld) # [0] is payload & [1] is sigma
+            #sigma_server = unpickle[1]
+            #servpld = pickle.loads(server_payload)
+            server_payload1 = server_payload[0]
+            server_payload1_unpickled = pickle.loads(server_payload1)
+            #print(server_payload1_unpickled)
+            challenge_server = server_payload1_unpickled[0]
+            pks = server_payload1_unpickled[3]
+            tkems = server_payload1_unpickled[4]
+            session_id = server_payload1_unpickled[5]
+
+        except pickle.UnpicklingError as e:
+            print("Error unpickling data:", e, flush=True)
+
+    
+
+    sys.stdin.flush()  # flush stdin after reading in input 
+    """
+    if byte_message:
+        message = pickle.loads(byte_message)
+        #function to process received message 
+
+        print(message[0])
+    """
+    
+    response = process_data_encryptor_encrypt(challenge_server, pks, tkems, session_id)
+  
+
+    # Print the response in receiver's terminal
+    #print(f"Receiver (response): {response}")
+    
+    # Convert the response to bytes and send it back to sender's stdout
+    #sys.stdout.write(response.encode('utf-8') + b'\n')  # Write response as bytes
+    sys.stdout.buffer.write(response)  # Write response as bytes
+    sys.stdout.flush()  # Ensure the response is flushed
+
+    return pks, tkems, session_id
+
+
 
 def getSerial():
 
@@ -201,36 +227,64 @@ def generate_key():
     return pk, sk, pk_serialize, sk_serialize
 
 
-def encrypt_csal():
+def encrypt_csal(publicKeys, session):
 
-    serial = getSerial()
-    cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
-    serial = serial + pickle.dumps(cl)
+    kems = []
+    dems = []
+
     enc_suite = generate_suite()
-    fetch1 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
-    public = enc_suite.kem.deserialize_public_key(fetch1[0])
-    encap, sender = enc_suite.create_sender_context(public)
+    serial = getSerial()
+    if publicKeys and session:
+        size_of_keys = len(publicKeys)
+        for i in range(size_of_keys):
+            pk = enc_suite.kem.deserialize_public_key(publicKeys[i])
+            encap, sender = enc_suite.create_sender_context(pk)
+            helpers.update_row('encryptor2.db', 'encryptor2', 'sid', session[i], {"encapKeys": encap})
+            row = helpers.fetch_row_by_primary_key('encryptor2.db', 'encryptor2', 'sid', session[i])
+            token = Fernet(row[5])
+            C_dem = token.encrypt(serial)
+            dems = dems.append(C_dem)
+            C_kem = sender.seal(row[5])
+            kems = kems.append(C_kem)
+    
+    else: #this is the first CSAL login
+        fetch1 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
+        public = enc_suite.kem.deserialize_public_key(fetch1[0])
+        encap, sender = enc_suite.create_sender_context(public)
+        fetch2 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
+        token = Fernet(fetch2[0])
+    
+        C_dem = token.encrypt(serial)
+        C_kem = sender.seal(fetch2[0])
+        sender.seal(serial)
+        kems = kems.append(C_kem)
+        dems = dems.append(C_dem)
+    #cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
+    #serial = serial + pickle.dumps(cl)
+    
+    #public = enc_suite.kem.deserialize_public_key(fetch1[0])
+    #encap, sender = enc_suite.create_sender_context(public)
     #helpers.insert_single_value('encryptor2.db', 'encryptor2', 'encapKeys', encap)
     #fetch3 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'encapKeys')
 
 
-    fetch2 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
-    token = Fernet(fetch2[0])
+    #fetch2 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
+    #token = Fernet(fetch2[0])
     
-    C_dem = token.encrypt(serial)
+    #C_dem = token.encrypt(serial)
    
     
 
 
     #print(C_dem)
     #print("token type:", base64.urlsafe_b64decode(C_dem)[0])
-    C_kem = sender.seal(fetch2[0])
-    sender.seal(serial)
+    #C_kem = sender.seal(fetch2[0])
+    #sender.seal(serial)
 
 
 
     
-    return C_dem, C_kem
+    return kems, dems
 
 
 # def decrypt_csal(ciphertext):
@@ -369,10 +423,10 @@ def sign_verify(pk, signature, message):
 
 def run_login_no_smuggle():
     create_db_and_table('encryptor2.db')
-    #insert_row_encryptor('encryptor2.db', 'encryptor2', sid)
-    print("here")
-    process_data_client()
-    print("And here too..")
+    insert_row_encryptor('encryptor2.db', 'encryptor2')
+    process_data_client() #this should be list [servPayload, sigma] 
+    #print(byt) 
+    #print(type(byt))
 
 
 def run_login_smuggle():
@@ -393,7 +447,7 @@ def run_history_experiments():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Select experiment to run')
-    parser.add_argument('--experiment','-e', type=str, nargs=1)
+    parser.add_argument('--experiment','-e', type=str, required=True, help="Experiment to run.")
     #parser.add_argument('--sessid','-s', type=int, nargs=1)
 
     args = parser.parse_args()

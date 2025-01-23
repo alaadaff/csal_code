@@ -7,49 +7,6 @@ import time
 from subprocess import PIPE, Popen
 
 
-class CSALClient():
-    def __init__(self):
-        self.client_socket = None
-        #self.sid = 0
-
-    def start_client(self):
-        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_socket.connect(('localhost', 12345))  # Connect to the server
-
-    def client_run_login(self, iter=1, smuggle=False):
-        loginf = 'lns'
-        if smuggle:
-            loginf = 'ls'
-        i = 0    
-        try:
-            while True and i<iter:
-                
-                # Receive data from the server
-                data = self.client_socket.recv(2048)
-                time.sleep(1)
-                # print(data)
-                # print(len(data))
-                #cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
-                #encryptor_data = data + (pickle.dumps(cl))
-                #print(type(encryptor_data))
-                #print(len(encryptor_data))
-                if data:
-                    #message = forward_to_subprocess(data, loginf)
-                    message = b'helllooo'
-                    #time.sleep(1)
-                    self.client_socket.sendall(message)
-                    print(message)
-                    print("Login completed")
-                    #self.sid += 1 
-                    #break
-                
-                    # Send data to the server
-                    #message = input("Enter message to send to server: ")
-                i+=1
-        except KeyboardInterrupt:
-            print("\nClient shutting down.")
-        finally:
-            self.client_socket.close()
 
 def forward_to_subprocess(serv_bytes, action):
 
@@ -61,6 +18,7 @@ def forward_to_subprocess(serv_bytes, action):
         ['python3', 'encryptor2.py', '-e', action],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
+        #stdout=sys.stdout, #for printing to client2 terminal for debugging
         stderr=subprocess.PIPE,
         text=False  # Handle data as bytes, not strings
     )
@@ -86,6 +44,45 @@ def forward_to_subprocess(serv_bytes, action):
         print(f"Error: {stderr.decode('utf-8')}")
 
     return stdout
+
+
+
+class CSALClient():
+    def __init__(self):
+        self.client_socket = None
+        #self.sid = 0
+
+    def start_client(self):
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket.connect(('localhost', 12345))  # Connect to the server
+
+    def client_run_login(self, iter=1, smuggle=False):
+        loginf = 'lns'
+        if smuggle:
+            loginf = 'ls'
+        i = 0    
+        try:
+            while True and i<iter:
+                
+                # Receive data from the server
+                data = self.client_socket.recv(8192)
+                cl = b'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0'
+                data_cl = [data, cl]
+                data_encryptor = pickle.dumps(data_cl)
+                if data:
+                    message = forward_to_subprocess(data_encryptor, loginf)
+                    self.client_socket.sendall(message)
+                    print("Login completed")
+                    #self.sid += 1 
+                    #break
+    
+                i+=1
+        except KeyboardInterrupt:
+            print("\nClient shutting down.")
+        finally:
+            self.client_socket.close()
+
+
 
 """
 

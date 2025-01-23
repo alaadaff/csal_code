@@ -319,6 +319,82 @@ def main():
     connection.close()
 
 
+def fetch_row_by_primary_key(db_path, table_name, primary_key_column, key_value):
+    try:
+        # Connect to the SQLite database
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Create SQL query using parameterized query to prevent SQL injection
+        query = f"SELECT * FROM {table_name} WHERE {primary_key_column} = ?"
+        
+        # Execute the query with the key value
+        cursor.execute(query, (key_value,))
+        
+        # Fetch the result
+        row = cursor.fetchone()  # Use fetchall() to get all matching rows
+
+        # Close connection
+        conn.close()
+
+        if row:
+            return list(row) #convert row from tuple to list 
+        else:
+            print(f"No record found with {primary_key_column} = {key_value}")
+            return None
+
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+        return None
+
+
+def update_row(db_path, table_name, primary_key_column, key_value, update_data):
+    """
+    Updates a row in the given SQLite database table where the primary key matches.
+
+    Args:
+        db_path (str): Path to the SQLite database file.
+        table_name (str): Name of the table to update.
+        primary_key_column (str): The primary key column name.
+        key_value (any): The value of the primary key for the row to update.
+        update_data (dict): A dictionary with column names as keys and new values as values.
+
+    Returns:
+        bool: True if the row was updated successfully, False otherwise.
+    """
+    try:
+        # Connect to the database
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Construct the SQL query dynamically
+        set_clause = ', '.join([f"{column} = ?" for column in update_data.keys()])
+        values = list(update_data.values())
+        values.append(key_value)
+
+        query = f"UPDATE {table_name} SET {set_clause} WHERE {primary_key_column} = ?"
+
+        # Execute the update statement
+        cursor.execute(query, values)
+        conn.commit()
+
+        # Check if the update was successful
+        if cursor.rowcount == 0:
+            print(f"No record found with {primary_key_column} = {key_value}")
+            return False
+        else:
+            print(f"Record updated successfully where {primary_key_column} = {key_value}")
+            return True
+
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+        return False
+
+    finally:
+        conn.close()
+
+
+
 if __name__ == '__main__':
    
     main()    

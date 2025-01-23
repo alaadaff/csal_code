@@ -68,7 +68,7 @@ class CSALServer():
         CREATE TABLE IF NOT EXISTS users (
             uid INTEGER PRIMARY KEY,
             user TEXT,
-            sid TEXT,
+            sid BLOB,
             publicKeys BLOB,
             CKEMs BLOB,
             CDEMs BLOB           
@@ -131,7 +131,8 @@ class CSALServer():
         keyParams = [{"key_params": "public-key", "alg": -7}]
         publicKeys = helpers.fetch_data('server.db', 'users', 'publicKeys')
         tKEM = helpers.fetch_data('server.db', 'users', 'CKEMs')
-        server_payload = [challenge, cookie, keyParams, publicKeys, tKEM]
+        sessid = helpers.fetch_data('server.db', 'users', 'sid')
+        server_payload = [challenge, cookie, keyParams, publicKeys, tKEM, sessid]
         # print(server_payload)
 
         return server_payload
@@ -141,47 +142,35 @@ class CSALServer():
         t0 = time.time()
         blob = self.server_params_login()
         servPayload, sigma = generate_signature(self.certificate, self.cert_sk, blob)
-        all_payload = servPayload + sigma 
+        all_payload = pickle.dumps([servPayload, sigma]) 
         log_s.append(len(all_payload))
+      
         try:
 
             #self.client_socket.sendall(all_payload)
             
             while True:
-                send = b'sending...'
-                self.client_socket.sendall(send)
-                # Receive data from the client
-                #data = client_socket.recv(1024)
-                #if not data:
-                #    break  # If no data, exit the loop (client disconnected)
-                #print(f"Received from client: {data.decode()}")
-
-                # Send data back to the client
-                #else:
-                #message = str(fetch_data('server.db', 'users', 'publicKeys'))
-                    #message = input("Enter message to send to client: ")
-                #if message:    
-                #client_socket.sendall(message.encode())
-                # cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
-                # # blob = self.server_params_login()
-                # # print(blob)
-                # all_payload1 = servPayload + sigma 
-                # all_payload2 = servPayload + sigma + pickle.dumps(cl)
-                # self.client_socket.sendall(all_payload)
-                data = self.client_socket.recv(2048)
+                #send = b'sending...'
+                try:
+                    self.client_socket.sendall(all_payload)
+                    time.sleep(1)
+                except BrokenPipeError:
+                    print("Broken pipe: Client is no longer connected. Closing socket.")
+                    break
+                   
+                data = self.client_socket.recv(8192)
                 if not data:
                     print("Client disconnected.")
                     break  # Exit loop if client disconnects
                 if data:
                     #self.insert_row_server('users', data)
-                    print("Data received from client")
+                    dat = pickle.loads(data)
+                    print(dat)
                     t1 = time.time()
                     log_e.append(len(data))
                     #break
                     
-            
-                    #else:
-                    #    break
+
                 tlog.append(t1-t0-1)
 
         except ConnectionResetError:
@@ -371,7 +360,7 @@ def run_login_experiments_no_smuggle(srv, iter):
         if srv.server_socket != None:
             srv.server_socket.close()
         os.system(f'rm {srv.db_name}')
-        os.system(f'rm encryptor2.db')
+        #os.system(f'rm encryptor2.db')
         print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
         print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
         print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")
