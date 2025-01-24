@@ -347,6 +347,33 @@ def fetch_row_by_primary_key(db_path, table_name, primary_key_column, key_value)
         print("SQLite error:", e)
         return None
 
+def fetch_entry_by_primary_key(db_path, table_name, primary_key_column, col_name, key_value):
+    try:
+        # Connect to the SQLite database
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Create SQL query using parameterized query to prevent SQL injection
+        query = f"SELECT {col_name} FROM {table_name} WHERE {primary_key_column} = ?"
+        
+        # Execute the query with the key value
+        cursor.execute(query, (key_value,))
+        
+        # Fetch the result
+        entry = cursor.fetchone()  # Use fetchall() to get all matching rows
+
+        # Close connection
+        conn.close()
+
+        if entry:
+            return list(entry) #convert row from tuple to list 
+        else:
+            print(f"No record found with {primary_key_column} = {key_value}")
+            return None
+
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+        return None
 
 def update_row(db_path, table_name, primary_key_column, key_value, update_data):
     """

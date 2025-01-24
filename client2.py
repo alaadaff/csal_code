@@ -59,8 +59,8 @@ class CSALClient():
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect(('localhost', 12345))  # Connect to the server
 
-    def client_run_login(self, iter=1, smuggle=True):
-        loginf = 'ls'
+    def client_run_login(self, iter=1, smuggle=False):
+        loginf = 'lns'
         if smuggle:
             loginf = 'ls'
         i = 0    
