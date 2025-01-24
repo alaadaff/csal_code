@@ -38,7 +38,7 @@ def create_db_and_table(db_name):
     # Create a table if it doesn't exist
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS encryptor2 (           
-        sid BLOB PRIMARY KEY,
+        sid BLOB,
         user TEXT,
         relyingParty TEXT,
         publicKeys BLOB,
@@ -128,8 +128,8 @@ def process_data_encryptor_smuggle(chall, old, publicKeys=[], tKems=[], session=
     #process data received from server and extract set of public keys
     
     #generate encryptor params and forward to client
-    
-    Ckem, Cdem = encrypt_csal(publicKeys, session)
+    sidd = insert_row_encryptor('encryptor2.db', 'encryptor2')
+    Ckem, Cdem = encrypt_csal(sidd, publicKeys, session)
     sessID = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
     pk_payload = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
     sign1 = [chall, sessID, pk_payload]
@@ -140,7 +140,6 @@ def process_data_encryptor_smuggle(chall, old, publicKeys=[], tKems=[], session=
     #sign = generateSignature(certA)
 
     encryptor_payload = [sessID, pk_payload, Ckem, Cdem, old, sign, certA, pk_pem, sign, sign]
-    print(encryptor_payload[4])
     encryptor_payload_serialize = pickle.dumps(encryptor_payload)
 
     return encryptor_payload_serialize
@@ -314,7 +313,7 @@ def process_data_client_smuggling():
             tdems = server_payload1_unpickled[6]
 
             c_old = decrypt_csal_smuggling(tkems, session_id)
-            print("COLD!!", c_old)
+           
 
         except pickle.UnpicklingError as e:
             print("Error unpickling data:", e, flush=True)
@@ -386,7 +385,8 @@ def encrypt_csal(sid, publicKeys=[], session=[]):
     kems = []
     dems = []
     sign = []
-
+    secrK = helpers.fetch_value_by_primary_key('encryptor2.db', 'encryptor2', 'secretKeys', 'sid', sid)
+    pk_own = helpers.fetch_value_by_primary_key('encryptor2.db', 'encryptor2', 'publicKeys', 'sid', sid)
     #sid = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
     #sid = helpers.fetch_data_order('encryptor2.db', 'encryptor2', 'sid', 'sid')
     #sid_curr = sid[-1]
@@ -401,7 +401,7 @@ def encrypt_csal(sid, publicKeys=[], session=[]):
     format=serialization.PrivateFormat.PKCS8,  # PKCS#8 or TraditionalOpenSSL (PKCS#1)
     encryption_algorithm=serialization.NoEncryption()  # Or provide a password-based encryption
     )
-    helpers.update_row('encryptor2.db', 'encryptor2', 'sid', sid, {"signingKeys":pem_private_key})
+    #helpers.update_row('encryptor2.db', 'encryptor2', 'sid', sid, {"signingKeys":pem_private_key})
 
     public_key = private_key.public_key()
     
@@ -438,7 +438,8 @@ def encrypt_csal(sid, publicKeys=[], session=[]):
         #fetch_sid = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
         public = enc_suite.kem.deserialize_public_key(fetch1[0])
         encap, sender = enc_suite.create_sender_context(public)
-        helpers.update_row('encryptor2.db', 'encryptor2', 'sid', sid, {"encapKeys":encap})
+        helpers.update_row('encryptor2.db', 'encryptor2', 'sid', sid, {"encapKeys":encap, "signingKeys":pem_private_key})
+        #helpers.update_row('encryptor2.db', 'encryptor2', 'sid', sid, {"signingKeys":pem_private_key})
         #fetch2 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
         #print(fetch2)
         #token = Fernet(fetch2[0])
@@ -463,13 +464,15 @@ def encrypt_csal(sid, publicKeys=[], session=[]):
             pk = enc_suite.kem.deserialize_public_key(publicKeys[i])
             encap, sender = enc_suite.create_sender_context(pk)
             #helpers.update_row('encryptor2.db', 'encryptor2', 'sid', sid_curr[-1], {"encapKeys": encap})
-            helpers.append_value_as_list('encryptor2.db', 'encryptor2', 'encapKeys', encap, 'sid', sid)
+            #helpers.append_value_as_blob('encryptor2.db', 'encryptor2', 'encapKeys', encap, 'sid', sid)
+            #helpers.update_row('encryptor2.db', 'encryptor2', 'sid', session[i], {"encapKeys":encap, "signingKeys":pem_private_key})
+            helpers.insert_row('encryptor2.db', 'encryptor2', ['sid', 'user', 'relyingParty', 'publicKeys', 'encapKeys', 'secretKeys', 'symmetricKeys', 'signingKeys'], (sid, 'Bob', 'facebook.com', publicKeys[i], encap, secrK, symmK, pem_private_key))
             #row = helpers.fetch_row_by_primary_key('encryptor2.db', 'encryptor2', 'sid', session[i])
             #token = Fernet(row[5])
             #token = Fernet(row[6])
             #C_dem = token.encrypt(serial)
             #dems.append(C_dem)
-            C_kem = sender.seal(symmK)
+            C_kem = sender.seal(symmK) #60 bytes 
             #C_kem = sender.seal(row[6])
             signature_kems = private_key.sign(
             C_kem,
@@ -482,8 +485,21 @@ def encrypt_csal(sid, publicKeys=[], session=[]):
             sign.append(signature_kems)
 
             kems.append(C_kem)
-            
-
+        #session should encrypt to its own public key
+        pk_own_serial = enc_suite.kem.deserialize_public_key(pk_own)
+        encap_own, sender1 = enc_suite.create_sender_context(pk_own_serial)
+        Ckem_own = sender1.seal(symmK)
+        helpers.update_row('encryptor2.db', 'encryptor2', 'sid', sid, {"encapKeys":encap_own, "signingKeys":pem_private_key})
+        sign_own = private_key.sign(
+            Ckem_own,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+                    ),
+            hashes.SHA256()
+             )
+        kems.append(Ckem_own)
+        sign.append(sign_own)
     #cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
     #serial = serial + pickle.dumps(cl)
     return kems, dems, sign, pem
@@ -512,7 +528,7 @@ def decrypt_csal(kms=[], dms=[], sess=[]):
     return log
 
 
-def decrypt_csal_smuggling(kms=[], sess=[]):
+def decrypt_csal_smuggling(sid_curr, kms=[], sess=[]):
 
     kem_old = []
 
@@ -520,23 +536,30 @@ def decrypt_csal_smuggling(kms=[], sess=[]):
     number_keys = len(sess)
     print("Here, is the decrypt func running?")
     for i in range(number_keys):
-        encap_key_fetch = helpers.fetch_row_by_primary_key('encryptor2.db', 'encryptor2', 'sid', sess[i])
-        encap_key = encap_key_fetch[4]
-        sk_decrypt = encap_key_fetch[5]
-        token = Fernet(encap_key_fetch[6])
+        #encap_key_fetch = helpers.fetch_row_by_primary_key('encryptor2.db', 'encryptor2', 'sid', sess[i])
+        #encap_key = encap_key_fetch[4]
+        #sk_decrypt = encap_key_fetch[5]
+        symmK = helpers.fetch_entry_by_primary_key('encryptor2.db', 'encryptor2', 'sid', 'symmetricKeys', sess[i])
+        token = Fernet(symmK)
+        sk_decrypt = helpers.fetch_entry_by_primary_key('encryptor2.db', 'encryptor2', 'sid', 'secretKeys', sess[i])
         sk = dec_suite.kem.deserialize_private_key(sk_decrypt)
-        recipient = dec_suite.create_recipient_context(encap_key, sk)
-        ptx_kem = recipient.open(kms[i])
-        kem_old.append(ptx_kem)
+        encap_keys = helpers.fetch_entry_by_primary_key('encryptor2.db', 'encryptor2', 'sid', 'encapKeys', sess[i])
+        values_list = encap_keys.split(b",")
+        if len(values_list > 1):
+            size_of_encap = len(values_list)
+            for j in range(size_of_encap):
+                recipient = dec_suite.create_recipient_context(values_list[j], sk)
+                ptx_kem = recipient.open(kms[i][j])
+                kem_old.append(ptx_kem)
         #ptx_dem = token.decrypt(dms[i])
     
     #encrypt the set of old kems to current session's k
-    curr_k_fetch = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys') #returns a list of keys
-    curr_k = curr_k_fetch[-1]
+    #curr_k_fetch = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys') #returns a list of keys
+    #curr_k = curr_k_fetch[-1]
+    curr_k = helpers.fetch_entry_by_primary_key('encryptor2.db', 'encryptor2', 'sid', 'symmetricKeys', sid_curr)
     f = Fernet(curr_k) 
     kem_old_bytes = pickle.dumps(kem_old)
-    C_old = f.encrypt(kem_old_bytes)
-    print(C_old)   
+    C_old = f.encrypt(kem_old_bytes) 
 
     return C_old
 
@@ -678,9 +701,20 @@ def run_login_no_smuggle():
 
 
 def run_login_smuggle():
-    create_db_and_table('encryptor2.db')
-    insert_row_encryptor('encryptor2.db', 'encryptor2')
-    process_data_client_smuggling()
+    #create_db_and_table('encryptor2.db')
+    #sid = insert_row_encryptor('encryptor2.db', 'encryptor2')
+    delimiter = b'\x00\xff\x00'
+    hex_value = b"\x07\xe4p\xb5\xfb\x82\x90|\xcfm}\xee'\xc3\x89,"
+    #encap_key_fetch = helpers.fetch_row_by_primary_key('encryptor2.db', 'encryptor2', 'sid', hex_value)
+    encap_key_fetch = helpers.fetch_entry_by_primary_key('encryptor2.db', 'encryptor2', 'sid', 'encapKeys', hex_value)
+    val = encap_key_fetch.split(delimiter)
+    sids = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
+    print(sids)
+    print(val)
+    #print(encap_key_fetch.decode('utf-8', errors='replace'))
+    #values_list = encap_key_fetch.split(b",")
+    #print(len(values_list))
+    #process_data_client_smuggling()
 
 
 def run_action_experiments():
@@ -697,6 +731,12 @@ def run_history_experiments():
     for i in range(size_of_log):
         print("Entry ", i, ":", lg[i])
     
+
+def main():
+
+    run_login_smuggle()
+
+
 
 
 if __name__ == "__main__":

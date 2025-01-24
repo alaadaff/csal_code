@@ -443,40 +443,44 @@ def update_row(db_path, table_name, primary_key_column, key_value, update_data):
 
 import sqlite3
 
-def append_value_as_list(db_path, table_name, column_name, append_value, pk_column, pk_value):
+def append_value_as_blob(db_path, table_name, column_name, append_value, pk_column, pk_value):
     """
-    Appends a value to an existing column in SQLite, formatting as a comma-separated list.
+    Appends a value to an existing BLOB column in SQLite using a binary delimiter.
 
     Args:
         db_path (str): Path to the SQLite database file.
         table_name (str): Table to update.
         column_name (str): Column to append value to.
-        append_value (str): Value to append.
+        append_value (bytes): Value to append as bytes.
         pk_column (str): Primary key column name.
         pk_value (any): The primary key value to match.
 
     Returns:
         bool: True if successful, False otherwise.
     """
+
+    # Define a unique binary delimiter
+    delimiter = b'\x00\xff\x00'  # Use an unlikely sequence for splitting later
+
     try:
         # Connect to the database
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        # SQL query to append value with a comma if the column is not empty
+        # SQL query to append value with a binary delimiter if the column is not empty
         query = f"""
         UPDATE {table_name}
         SET {column_name} = 
             CASE 
-                WHEN {column_name} IS NULL OR {column_name} = '' 
+                WHEN {column_name} IS NULL OR LENGTH({column_name}) = 0 
                 THEN ? 
-                ELSE {column_name} || ',' || ? 
+                ELSE {column_name} || ? || ? 
             END
         WHERE {pk_column} = ?;
         """
 
-        # Execute the update with parameterized values
-        cursor.execute(query, (append_value, append_value, pk_value))
+        # Execute the query with the binary delimiter
+        cursor.execute(query, (append_value, delimiter, append_value, pk_value))
         conn.commit()
 
         # Check if any row was updated
@@ -538,7 +542,42 @@ def fetch_value_by_primary_key(db_path, table_name, target_column, primary_key_c
         return None
 
 
+def insert_row(db_path, table_name, column_names, values):
+    """
+    Inserts a full row into the SQLite database.
 
+    Args:
+        db_path (str): Path to the SQLite database file.
+        table_name (str): Name of the table to insert data into.
+        column_names (list): List of column names to be inserted.
+        values (tuple): Corresponding values for each column.
+
+    Returns:
+        bool: True if insertion is successful, False otherwise.
+    """
+    try:
+        # Connect to SQLite database
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Construct SQL query dynamically
+        placeholders = ', '.join(['?' for _ in values])  # Create placeholders (?, ?, ?)
+        columns = ', '.join(column_names)  # Format column names
+        query = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
+
+        # Execute the query
+        cursor.execute(query, values)
+
+        # Commit changes
+        conn.commit()
+        conn.close()
+
+        print("Row inserted successfully.")
+        return True
+
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+        return False
 
 
 if __name__ == '__main__':
