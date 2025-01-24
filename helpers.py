@@ -286,7 +286,27 @@ def fetch_data(db_name, table_name, column_name):
 
     return column_data
 
+def fetch_data_order(db_name, table_name, column_name, order_column):
+    # Connect to the SQLite database
+    conn = sqlite3.connect(db_name)
+    
+    # Create a cursor object to interact with the database
+    cursor = conn.cursor()
 
+    # SELECT data ordered by the specified column (default ROWID)
+    query = f"SELECT {column_name} FROM {table_name} ORDER BY {order_column}"
+    cursor.execute(query)
+
+    # Fetch all rows from the result of the query
+    rows = cursor.fetchall()
+
+    # Extract and store the contents of the column
+    column_data = [row[0] for row in rows]
+
+    # Close the connection
+    conn.close()
+
+    return column_data
 
 
 def main():
@@ -412,6 +432,60 @@ def update_row(db_path, table_name, primary_key_column, key_value, update_data):
         else:
             #print(f"Record updated successfully where {primary_key_column} = {key_value}")
             return True
+
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+        return False
+
+    finally:
+        conn.close()
+
+
+import sqlite3
+
+def append_value_as_list(db_path, table_name, column_name, append_value, pk_column, pk_value):
+    """
+    Appends a value to an existing column in SQLite, formatting as a comma-separated list.
+
+    Args:
+        db_path (str): Path to the SQLite database file.
+        table_name (str): Table to update.
+        column_name (str): Column to append value to.
+        append_value (str): Value to append.
+        pk_column (str): Primary key column name.
+        pk_value (any): The primary key value to match.
+
+    Returns:
+        bool: True if successful, False otherwise.
+    """
+    try:
+        # Connect to the database
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # SQL query to append value with a comma if the column is not empty
+        query = f"""
+        UPDATE {table_name}
+        SET {column_name} = 
+            CASE 
+                WHEN {column_name} IS NULL OR {column_name} = '' 
+                THEN ? 
+                ELSE {column_name} || ',' || ? 
+            END
+        WHERE {pk_column} = ?;
+        """
+
+        # Execute the update with parameterized values
+        cursor.execute(query, (append_value, append_value, pk_value))
+        conn.commit()
+
+        # Check if any row was updated
+        if cursor.rowcount > 0:
+            print(f"Successfully updated row with {pk_column} = {pk_value}.")
+            return True
+        else:
+            print(f"No record found with {pk_column} = {pk_value}.")
+            return False
 
     except sqlite3.Error as e:
         print("SQLite error:", e)

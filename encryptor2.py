@@ -44,7 +44,8 @@ def create_db_and_table(db_name):
         publicKeys BLOB,
         encapKeys BLOB,
         secretKeys BLOB,
-        symmetricKeys BLOB
+        symmetricKeys BLOB,
+        signingKeys BLOB
     )
     ''')
 
@@ -97,25 +98,25 @@ def insert_row_encryptor(db_name, table_name):
     finally:
         # Close the connection to the database
         conn.close()
-        return sid
+    return sid
 
-def process_data_encryptor_encrypt(sid, cl, chall, publicKeys=[], tKems=[], session=[]):
+def process_data_encryptor_encrypt(chall, publicKeys=[], tKems=[], session=[]):
 
-    #process data received from server and extract set of public keys
     
     #generate encryptor params and forward to client
-    
-    Ckem, Cdem, pem_ctxt = encrypt_csal(sid, cl, publicKeys, session)
-    # sessID = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
+    sidd = insert_row_encryptor('encryptor2.db', 'encryptor2')
+    #Ckem, Cdem, pem_ctxt = encrypt_csal(sid, cl, publicKeys, session)
+    Ckem, Cdem, signs, pem = encrypt_csal(sidd, publicKeys, session)
+    sessID = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
     pk_payload = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
-    sign1 = [chall, sid, pk_payload]
+    sign1 = [chall, sessID, pk_payload]
     sign1_pickled = pickle.dumps(sign1)
-    sign, pk_pem = generateSignature(sign1_pickled)
+    sigma, pk_pem = generateSignature(sign1_pickled)
 
     certA, sk = server2.generate_random_certificate()
     #sign = generateSignature(certA)
 
-    encryptor_payload = [sid, pk_payload, Ckem, Cdem, sign, certA, pk_pem, sign, sign]
+    encryptor_payload = [sessID, pk_payload, Ckem, Cdem, sigma, certA, pk_pem, signs, pem]
     encryptor_payload_serialize = pickle.dumps(encryptor_payload)
 
     return encryptor_payload_serialize
@@ -149,7 +150,7 @@ def process_data_encryptor_smuggle(chall, old, publicKeys=[], tKems=[], session=
 
 
 # Function to process data sent from client via pipes 
-def process_data_client_login(sid):
+def process_data_client_login():
 
    # Read the message from stdin (in bytes)
     try:
@@ -177,7 +178,7 @@ def process_data_client_login(sid):
             #print(server_payload1_unpickled)
             challenge_server = server_payload1_unpickled[0]
             pks = server_payload1_unpickled[3]
-            
+            print(len(pks))
             tkems = server_payload1_unpickled[4]
             
             session_id = server_payload1_unpickled[5]
@@ -198,7 +199,7 @@ def process_data_client_login(sid):
         print(message[0])
     """
     
-    response = process_data_encryptor_encrypt(sid, cl, challenge_server, pks, tkems, session_id)
+    response = process_data_encryptor_encrypt(challenge_server, pks, tkems, session_id)
   
 
     # Print the response in receiver's terminal
@@ -380,65 +381,111 @@ def generate_key():
 
 
 
-def encrypt_csal(sid, cl, publicKeys=[], session=[]):
+def encrypt_csal(sid, publicKeys=[], session=[]):
+
     kems = []
     dems = []
+    sign = []
 
-    enc_suite = generate_suite()
-    serial = getSerial()
-
-    sk = rsa.generate_private_key(
+    #sid = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
+    #sid = helpers.fetch_data_order('encryptor2.db', 'encryptor2', 'sid', 'sid')
+    #sid_curr = sid[-1]
+    #print("SID LENGTH", sid)
+    private_key = rsa.generate_private_key(
         public_exponent=65537,
         key_size=2048,
         backend=default_backend()
     )
-    pk = sk.public_key()
-    public_pem = pk.public_bytes(
+    pem_private_key = private_key.private_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PrivateFormat.PKCS8,  # PKCS#8 or TraditionalOpenSSL (PKCS#1)
+    encryption_algorithm=serialization.NoEncryption()  # Or provide a password-based encryption
+    )
+    helpers.update_row('encryptor2.db', 'encryptor2', 'sid', sid, {"signingKeys":pem_private_key})
+
+    public_key = private_key.public_key()
+    
+    pem = public_key.public_bytes(
     encoding=serialization.Encoding.PEM,
     format=serialization.PublicFormat.SubjectPublicKeyInfo
     #format=serialization.PublicFormat.OpenSSH
     )
 
-    # fetch2 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
-    # token = Fernet(fetch2[0])
-    # C_dem = token.encrypt(serial)
-    K = helpers.fetch_entry_by_primary_key('encryptor2.db', 'encryptor2', 'sid', sid, 'symmetricKeys')
-    token = Fernet(K[0])
-    C_dem = token.encrypt((serial, cl))
-    dems.append(C_dem,generateSignature_ciphertexts(sk, C_dem))
+    enc_suite = generate_suite()
+    serial = getSerial()
+
+    symmK = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
+    token = Fernet(symmK[-1])
+    C_dem = token.encrypt(serial)
+    signature_dem = private_key.sign(
+        C_dem,
+        padding.PSS(
+             mgf=padding.MGF1(hashes.SHA256()),
+             salt_length=padding.PSS.MAX_LENGTH
+                 ),
+         hashes.SHA256()
+    )
+
+    dems.append(C_dem)
+    sign.append(signature_dem)
     
+   
+
     if len(publicKeys) == 0 and len(session)== 0: #first csal login
         print("This is the first CSAL login!")
         fetch1 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
-        fetch_sid = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
+        #fetch_sid = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
         public = enc_suite.kem.deserialize_public_key(fetch1[0])
         encap, sender = enc_suite.create_sender_context(public)
-        helpers.update_row('encryptor2.db', 'encryptor2', 'sid', fetch_sid[0], {"encapKeys":encap})
-        fetch2 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
-        # token = Fernet(fetch2[0])
+        helpers.update_row('encryptor2.db', 'encryptor2', 'sid', sid, {"encapKeys":encap})
+        #fetch2 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
+        #print(fetch2)
+        #token = Fernet(fetch2[0])
     
-        # C_dem = token.encrypt(serial)
+        C_kem = sender.seal(symmK[-1])
+        signature_kem = private_key.sign(
+        C_kem,
+        padding.PSS(
+             mgf=padding.MGF1(hashes.SHA256()),
+             salt_length=padding.PSS.MAX_LENGTH
+                 ),
+         hashes.SHA256()
+          )
+        kems.append(C_kem)
+        sign.append(signature_kem)
         
-        C_kem = sender.seal(fetch2[0])
-        
-        kems.append((C_kem,generateSignature_ciphertexts(sk, C_kem)))
-       
+
 
     if len(publicKeys)>0 and len(session)>0:
         size_of_keys = len(publicKeys)
         for i in range(size_of_keys):
             pk = enc_suite.kem.deserialize_public_key(publicKeys[i])
             encap, sender = enc_suite.create_sender_context(pk)
-            helpers.update_row('encryptor2.db', 'encryptor2', 'sid', session[i], {"encapKeys": encap})
-            row = helpers.fetch_row_by_primary_key('encryptor2.db', 'encryptor2', 'sid', session[i])
-            # token = Fernet(row[6])
-            # C_dem = token.encrypt(serial)
-            # dems.append((C_dem, generateSignature_ciphertexts(sk, C_dem)))
-            C_kem = sender.seal(row[6])
-            kems.append((C_kem, generateSignature_ciphertexts(sk, C_kem)))
+            #helpers.update_row('encryptor2.db', 'encryptor2', 'sid', sid_curr[-1], {"encapKeys": encap})
+            helpers.append_value_as_list('encryptor2.db', 'encryptor2', 'encapKeys', encap, 'sid', sid)
+            #row = helpers.fetch_row_by_primary_key('encryptor2.db', 'encryptor2', 'sid', session[i])
+            #token = Fernet(row[5])
+            #token = Fernet(row[6])
+            #C_dem = token.encrypt(serial)
+            #dems.append(C_dem)
+            C_kem = sender.seal(symmK[-1])
+            #C_kem = sender.seal(row[6])
+            signature_kems = private_key.sign(
+            C_kem,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+                    ),
+            hashes.SHA256()
+             )
+            sign.append(signature_kems)
 
-    
-    return kems, dems, public_pem
+            kems.append(C_kem)
+            
+
+    #cl = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0"}
+    #serial = serial + pickle.dumps(cl)
+    return kems, dems, sign, pem
 
 
 def decrypt_csal(kms=[], dms=[], sess=[]):
@@ -623,9 +670,9 @@ def sign_verify(pk, signature, message):
 
 def run_login_no_smuggle():
     create_db_and_table('encryptor2.db')
-    sid = insert_row_encryptor('encryptor2.db', 'encryptor2')
+    #insert_row_encryptor('encryptor2.db', 'encryptor2')
     #process_data_client() #this should be list [servPayload, sigma] 
-    process_data_client_login(sid)
+    process_data_client_login()
    
 
 
