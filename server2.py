@@ -96,7 +96,9 @@ class CSALServer():
             user = "Alice"
             sid = data[0][i]
             publicK = data[1][i]
-            ckem = data[2][0]
+            #ckem = data[2][0]
+            print(len(data[2]))
+            ckem = pickle.dumps(data[2])
             cdem = data[3][0]
             cold = data[4]
         elif len(data) == 9:
@@ -104,7 +106,10 @@ class CSALServer():
             user = "Alice"
             sid = data[0][i]
             publicK = data[1][i]
-            ckem = data[2][0]
+            #ckem = data[2][0]
+            #ckem = data[2]
+            print(len(data[2]))
+            ckem = pickle.dumps(data[2])
             cdem = data[3][0]
             cold = None
 

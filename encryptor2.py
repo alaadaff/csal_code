@@ -414,8 +414,9 @@ def encrypt_csal(sid, publicKeys=[], session=[]):
     enc_suite = generate_suite()
     serial = getSerial()
 
-    symmK = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
-    token = Fernet(symmK[-1])
+    #symmK = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
+    symmK = helpers.fetch_value_by_primary_key('encryptor2.db', 'encryptor2', 'symmetricKeys', 'sid', sid)
+    token = Fernet(symmK)
     C_dem = token.encrypt(serial)
     signature_dem = private_key.sign(
         C_dem,
@@ -442,7 +443,7 @@ def encrypt_csal(sid, publicKeys=[], session=[]):
         #print(fetch2)
         #token = Fernet(fetch2[0])
     
-        C_kem = sender.seal(symmK[-1])
+        C_kem = sender.seal(symmK)
         signature_kem = private_key.sign(
         C_kem,
         padding.PSS(
@@ -468,7 +469,7 @@ def encrypt_csal(sid, publicKeys=[], session=[]):
             #token = Fernet(row[6])
             #C_dem = token.encrypt(serial)
             #dems.append(C_dem)
-            C_kem = sender.seal(symmK[-1])
+            C_kem = sender.seal(symmK)
             #C_kem = sender.seal(row[6])
             signature_kems = private_key.sign(
             C_kem,

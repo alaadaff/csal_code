@@ -495,6 +495,51 @@ def append_value_as_list(db_path, table_name, column_name, append_value, pk_colu
         conn.close()
 
 
+def fetch_value_by_primary_key(db_path, table_name, target_column, primary_key_column, key_value):
+    """
+    Fetches a specific value from a column by referencing the primary key column and value.
+
+    Args:
+        db_path (str): Path to the SQLite database file.
+        table_name (str): Name of the table to fetch data from.
+        target_column (str): Column from which to fetch the value.
+        primary_key_column (str): The primary key column to filter the record.
+        key_value (any): The value of the primary key to match.
+
+    Returns:
+        The value of the target column if found, otherwise None.
+    """
+    try:
+        # Connect to the SQLite database
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Prepare SQL query with placeholders to prevent SQL injection
+        query = f"SELECT {target_column} FROM {table_name} WHERE {primary_key_column} = ?"
+
+        # Execute the query with the primary key value as parameter
+        cursor.execute(query, (key_value,))
+        
+        # Fetch the result (single value)
+        row = cursor.fetchone()
+
+        # Close the connection
+        conn.close()
+
+        # Return the result if found
+        if row:
+            return row[0]  # Return the specific column value
+        else:
+            print(f"No record found with {primary_key_column} = {key_value}")
+            return None
+
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+        return None
+
+
+
+
 
 if __name__ == '__main__':
    
