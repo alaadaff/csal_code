@@ -122,6 +122,29 @@ def process_data_encryptor_encrypt(chall, publicKeys=[], tKems=[], session=[]):
 
 
 
+def process_data_encryptor_smuggle(chall, old, publicKeys=[], tKems=[], session=[]):
+
+    #process data received from server and extract set of public keys
+    
+    #generate encryptor params and forward to client
+    
+    Ckem, Cdem = encrypt_csal(publicKeys, session)
+    sessID = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
+    pk_payload = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
+    sign1 = [chall, sessID, pk_payload]
+    sign1_pickled = pickle.dumps(sign1)
+    sign, pk_pem = generateSignature(sign1_pickled)
+
+    certA, sk = server2.generate_random_certificate()
+    #sign = generateSignature(certA)
+
+    encryptor_payload = [sessID, pk_payload, Ckem, Cdem, old, sign, certA, pk_pem, sign, sign]
+    print(encryptor_payload[4])
+    encryptor_payload_serialize = pickle.dumps(encryptor_payload)
+
+    return encryptor_payload_serialize
+
+
 
 
 
@@ -254,6 +277,67 @@ def process_data_client_retrieval():
     return log
     
 
+def process_data_client_smuggling():
+
+   # Read the message from stdin (in bytes)
+    try:
+        byte_message = sys.stdin.buffer.read()
+        #print("Received byte message:", byte_message, flush=True)
+    except Exception as e:
+        print(f"Error occurred: {e}", flush=True)
+
+
+    if byte_message:
+
+        try:
+
+            unpickle = pickle.loads(byte_message)
+            serv_payld = unpickle[0]
+            cl = unpickle[1]
+        
+            #print("Decoded message:", unpickle, flush=True)
+            server_payload = pickle.loads(serv_payld) # [0] is payload & [1] is sigma
+            #sigma_server = unpickle[1]
+            #servpld = pickle.loads(server_payload)
+            server_payload1 = server_payload[0]
+            server_payload1_unpickled = pickle.loads(server_payload1)
+            #print(server_payload1_unpickled)
+            #print(server_payload1_unpickled)
+            challenge_server = server_payload1_unpickled[0]
+            pks = server_payload1_unpickled[3]
+            
+            tkems = server_payload1_unpickled[4]
+            
+            session_id = server_payload1_unpickled[5]
+
+            tdems = server_payload1_unpickled[6]
+
+            c_old = decrypt_csal_smuggling(tkems, session_id)
+            print("COLD!!", c_old)
+
+        except pickle.UnpicklingError as e:
+            print("Error unpickling data:", e, flush=True)
+
+    sys.stdin.flush()  # flush stdin after reading in input 
+    """
+    if byte_message:
+        message = pickle.loads(byte_message)
+        #function to process received message 
+
+        print(message[0])
+    """
+    
+    response = process_data_encryptor_smuggle(challenge_server, c_old, pks, tkems, session_id)
+  
+
+    # Print the response in receiver's terminal
+    #print(f"Receiver (response): {response}")
+    
+    # Convert the response to bytes and send it back to sender's stdout
+    #sys.stdout.write(response.encode('utf-8') + b'\n')  # Write response as bytes
+    sys.stdout.buffer.write(response)  # Write response as bytes
+    sys.stdout.flush()  # Ensure the response is flushed
+
 
 
 def getSerial():
@@ -360,6 +444,35 @@ def decrypt_csal(kms=[], dms=[], sess=[]):
         log.append(ptx_dem)
 
     return log
+
+
+def decrypt_csal_smuggling(kms=[], sess=[]):
+
+    kem_old = []
+
+    dec_suite = generate_suite()
+    number_keys = len(sess)
+    print("Here, is the decrypt func running?")
+    for i in range(number_keys):
+        encap_key_fetch = helpers.fetch_row_by_primary_key('encryptor2.db', 'encryptor2', 'sid', sess[i])
+        encap_key = encap_key_fetch[4]
+        sk_decrypt = encap_key_fetch[5]
+        token = Fernet(encap_key_fetch[6])
+        sk = dec_suite.kem.deserialize_private_key(sk_decrypt)
+        recipient = dec_suite.create_recipient_context(encap_key, sk)
+        ptx_kem = recipient.open(kms[i])
+        kem_old.append(ptx_kem)
+        #ptx_dem = token.decrypt(dms[i])
+    
+    #encrypt the set of old kems to current session's k
+    curr_k_fetch = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys') #returns a list of keys
+    curr_k = curr_k_fetch[-1]
+    f = Fernet(curr_k) 
+    kem_old_bytes = pickle.dumps(kem_old)
+    C_old = f.encrypt(kem_old_bytes)
+    print(C_old)   
+
+    return C_old
 
 # def decrypt_csal(ciphertext):
 
@@ -498,14 +611,13 @@ def run_login_no_smuggle():
     #process_data_client() #this should be list [servPayload, sigma] 
     process_data_client_login()
    
-    
-  
 
 
 def run_login_smuggle():
     create_db_and_table('encryptor2.db')
     insert_row_encryptor('encryptor2.db', 'encryptor2')
-    pass
+    process_data_client_smuggling()
+
 
 def run_action_experiments():
     pass
@@ -521,7 +633,6 @@ def run_history_experiments():
     for i in range(size_of_log):
         print("Entry ", i, ":", lg[i])
     
-
 
 
 if __name__ == "__main__":

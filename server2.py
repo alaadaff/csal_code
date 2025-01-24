@@ -71,8 +71,8 @@ class CSALServer():
             sid BLOB,
             publicKeys BLOB,
             CKEMs BLOB,
-            CDEMs BLOB           
-
+            CDEMs BLOB,
+            COLD BLOB                      
         )
         ''')
 
@@ -91,11 +91,22 @@ class CSALServer():
         """
         userid = random.randint(1, 9999)
         data = pickle.loads(pickled_data)
-        user = "Alice"
-        sid = data[0][i]
-        publicK = data[1][i]
-        ckem = data[2][0]
-        cdem = data[3][0]
+        if len(data) == 10:
+            print("here 10")
+            user = "Alice"
+            sid = data[0][i]
+            publicK = data[1][i]
+            ckem = data[2][0]
+            cdem = data[3][0]
+            cold = data[4]
+        elif len(data) == 9:
+            print("here 9")
+            user = "Alice"
+            sid = data[0][i]
+            publicK = data[1][i]
+            ckem = data[2][0]
+            cdem = data[3][0]
+            cold = None
 
         try:
             
@@ -104,10 +115,10 @@ class CSALServer():
             cursor = conn.cursor()
 
             # Prepare the SQL query with placeholders for variables
-            sql = f"INSERT INTO {table_name} (uid, user, sid, publicKeys, CKEMs, CDEMs) VALUES (?, ?, ?, ?, ?, ?)"
+            sql = f"INSERT INTO {table_name} (uid, user, sid, publicKeys, CKEMs, CDEMs, COLD) VALUES (?, ?, ?, ?, ?, ?, ?)"
             
             # Execute the query, passing the values as a tuple
-            cursor.execute(sql, (userid, user, sid, publicK, ckem, cdem))
+            cursor.execute(sql, (userid, user, sid, publicK, ckem, cdem, cold))
             
             # Commit the transaction
             conn.commit()
@@ -158,9 +169,6 @@ class CSALServer():
                     servPayload, sigma = generate_signature(self.certificate, self.cert_sk, blob)
                     all_payload = pickle.dumps([servPayload, sigma]) 
                     self.client_socket.sendall(all_payload)
-                    pl1 = pickle.loads(all_payload)
-                    pl2 = pickle.loads(pl1[0])
-                    print(pl2)
                     time.sleep(1)
                 except BrokenPipeError:
                     print("Broken pipe: Client is no longer connected. Closing socket.")
@@ -171,7 +179,7 @@ class CSALServer():
                     print("Client disconnected.")
                     break  # Exit loop if client disconnects
                 if data:
-                    #print(pickle.loads(data))
+                    dat = pickle.loads(data)
                     self.insert_row_server('users', data, count)
                     t1 = time.time()
                     log_e.append(len(data))
@@ -334,9 +342,9 @@ def run_login_experiments(srv, iter):
     encryptor_sizes_log = []
     try:
         srv.start_server()
-        for i in range(iter):
-            print(f"Iteration {i}")
-            srv.server_run_login(times_log, server_sizes_log, encryptor_sizes_log, True)
+        #for i in range(iter):
+        #    print(f"Iteration {i}")
+        srv.server_run_login(times_log, server_sizes_log, encryptor_sizes_log, True)
     except:
         raise Exception("Error")
     finally:
@@ -344,8 +352,8 @@ def run_login_experiments(srv, iter):
             srv.client_socket.close()
         if srv.server_socket != None:
             srv.server_socket.close()
-        os.system(f'rm {srv.db_name}')
-        os.system(f'rm encryptor2.db')
+        #os.system(f'rm {srv.db_name}')
+        #os.system(f'rm encryptor2.db')
         print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
         print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
         print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")

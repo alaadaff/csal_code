@@ -383,7 +383,7 @@ def update_row(db_path, table_name, primary_key_column, key_value, update_data):
             print(f"No record found with {primary_key_column} = {key_value}")
             return False
         else:
-            print(f"Record updated successfully where {primary_key_column} = {key_value}")
+            #print(f"Record updated successfully where {primary_key_column} = {key_value}")
             return True
 
     except sqlite3.Error as e:
