@@ -25,7 +25,7 @@ for iterations between 1 and 20. Additionally, we support size measurements for 
 
 For `n` iterations on an experiment `experiment_name`, run 
 ```
-python3 simulator.py -e login-no-smuggle -i n
+python3 simulator.py -e experiment_name -i n
 ```
 where `experiment_name` can be selected among `login-no-smuggle`, `login-all`, and `history`.
 The measured outputs are shown in the server window.
