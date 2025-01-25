@@ -25,12 +25,20 @@ def forward_to_subprocess(serv_bytes, action):
     stdout, stderr = process.communicate(input=serv_bytes)  # Automatically flushes stdin and reads stdout
 
     if stdout:
-        print("Subprocess Output:\n", stdout)
+        #print("Subprocess Output:\n", stdout)
+        truncated_output = stdout[-1000:]  # Get last 500 bytes
+        print("Last 1000 bytes of subprocess output:\n", truncated_output)
+        #pass
+
+    #To print the entire encryptor output 
+    #if stdout:
+    #    #print("Subprocess Output:\n", stdout)    
 
     if stderr:
         print(f"Error: {stderr.decode('utf-8')}")
 
     return stdout
+
 
 
 
@@ -43,10 +51,12 @@ class CSALClient():
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect(('localhost', 12345))  # Connect to the server
 
-    def client_run_login(self, iter=1, smuggle=False):
-        loginf = 'h'
+    def client_run_login(self, iter=1, smuggle=False, history=False):
+        loginf = 'lns'
         if smuggle:
             loginf = 'ls'
+        elif history:
+            loginf = 'h'
         i = 0    
         try:
             while True and i<iter:
@@ -75,7 +85,7 @@ def run_login_experiments(cl, iter):
     try:
         cl.start_client()
         #for _ in range(iter):
-        cl.client_run_login(iter, False)
+        cl.client_run_login(iter, True, False)
     except:
         raise Exception("Error")
 
@@ -83,24 +93,16 @@ def run_login_experiments_no_smuggle(cl, iter):
     try:
         cl.start_client()
         #for _ in range(iter):
-        cl.client_run_login(iter, False)
+        cl.client_run_login(iter, False, False)
     except:
         raise Exception("Error")
     
-
-def run_reenc_experiments(cl, iter):
-    print(3)
-    pass
-
-def run_action_experiments(cl, iter):
-    print(4)
-    pass
 
 def run_history_experiments(cl, iter):
     try:
         cl.start_client()
         #for _ in range(iter):
-        cl.client_run_login(iter, False)
+        cl.client_run_login(iter, False, True)
     except:
         raise Exception("Error")
 
@@ -120,13 +122,8 @@ if __name__ == '__main__':
         run_login_experiments_no_smuggle(csal_cl, args.iterations)
     elif args.experiment == "ls":
         run_login_experiments(csal_cl, args.iterations)
-    elif args.experiment == "a":
-        run_action_experiments(csal_cl, args.iterations)
-    elif args.experiment == "r":
-        run_reenc_experiments(csal_cl, args.iterations)
     elif args.experiment == "h":
         run_history_experiments(csal_cl, args.iterations)
-
 
     end_time = time.process_time()
     #simulator.run_in_terminal('python3 encryptor2.py')

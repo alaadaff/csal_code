@@ -163,7 +163,6 @@ def process_data_client_login():
     if byte_message:
 
         try:
-
             unpickle = pickle.loads(byte_message)
             serv_payld = unpickle[0]
             cl = unpickle[1]
@@ -214,7 +213,7 @@ def process_data_client_retrieval():
     if byte_message:
 
         try:
-
+            #print("Payload size", len(byte_message))
             unpickle = pickle.loads(byte_message)
             serv_payld = unpickle[0]
             cl = unpickle[1]
@@ -240,7 +239,7 @@ def process_data_client_retrieval():
     sys.stdin.flush()  # flush stdin after reading in input 
     
     response = process_data_encryptor_encrypt(challenge_server, pks, tkems, session_id) #FIXME
-    #response = b"Log returned"
+    
   
     
     # Convert the response to bytes and send it back to sender's stdout
@@ -264,7 +263,7 @@ def process_data_client_smuggling():
     if byte_message:
 
         try:
-
+            #print("Payload size", len(byte_message))
             unpickle = pickle.loads(byte_message)
             serv_payld = unpickle[0]
             cl = unpickle[1]
@@ -476,8 +475,8 @@ def decrypt_csal(kms=[], dms=[], sess=[]):
                     log.append(ptx_dem)
                     kem_old.append(ptx_kem)
                 except:
-                    pass
-                    #print("Not decrypted")
+                    #pass
+                    print("Not decrypted")
                 
 
                 #log.append(ptx_dem)
@@ -611,12 +610,6 @@ def run_login_smuggle():
     process_data_client_smuggling()
 
 
-def run_action_experiments():
-    pass
-
-def run_reenc_experiments():
-    pass
-
 def run_history_experiments():
     create_db_and_table('encryptor2.db')
     #insert_row_encryptor('encryptor2.db', 'encryptor2')
@@ -626,10 +619,6 @@ def run_history_experiments():
     for i in range(size_of_log):
         print("Entry ", i, ":", lg[i])
     
-
-def main():
-
-    run_login_smuggle()
 
 
 
@@ -645,10 +634,6 @@ if __name__ == "__main__":
         run_login_no_smuggle()
     elif args.experiment == "ls":
         run_login_smuggle()
-    elif args.experiment == "a":
-        run_action_experiments()
-    elif args.experiment == "r":
-        run_reenc_experiments()
     elif args.experiment == "h":
         run_history_experiments()
    

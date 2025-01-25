@@ -83,14 +83,6 @@ if __name__ == '__main__':
         run_in_terminal('python server2.py' + f' -e ls -i {args.iterations[0]}')
         time.sleep(2)
         run_in_terminal('python client2.py' + f' -e ls -i {args.iterations[0]}')
-    elif args.experiment[0] == "action":
-        run_in_terminal('python server2.py' + f' -e a -i {args.iterations[0]}')
-        time.sleep(2)
-        run_in_terminal('python client2.py' + f' -e a -i {args.iterations[0]}')
-    elif args.experiment[0] == "reenc":
-        run_in_terminal('python server2.py' + f' -e r -i {args.iterations[0]}')
-        time.sleep(2)
-        run_in_terminal('python client2.py' + f' -e r -i {args.iterations[0]}')
     elif args.experiment[0] == "history":
         run_in_terminal('python server2.py' + f' -e h -i {args.iterations[0]}')
         time.sleep(2)

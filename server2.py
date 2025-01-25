@@ -96,7 +96,7 @@ class CSALServer():
             sid = data[0][i]
             publicK = data[1][i]
             #ckem = data[2][0]
-            print(len(data[2]))
+            #print(len(data[2]))
             ckem = pickle.dumps(data[2])
             cdem = data[3][0]
             cold = data[4]
@@ -106,7 +106,7 @@ class CSALServer():
             publicK = data[1][i]
             #ckem = data[2][0]
             #ckem = data[2]
-            print(len(data[2]))
+            #print(len(data[2]))
             ckem = pickle.dumps(data[2])
             cdem = data[3][0]
             cold = None
@@ -156,17 +156,19 @@ class CSALServer():
     def server_run_login(self, tlog, log_s, log_e, smuggle=True):
         # Create params for a new session [N, cookie_tmp, params, PKs, certRP, sigma]
         t0 = time.time()
-      
+        start_time = time.process_time()
         try:
-
+            
             #self.client_socket.sendall(all_payload)
             count=0
             while True:
                 try:
+                    #start_time = time.process_time()
                     blob = self.server_params_login()
                     servPayload, sigma = generate_signature(self.certificate, self.cert_sk, blob)
                     all_payload = pickle.dumps([servPayload, sigma]) 
                     self.client_socket.sendall(all_payload)
+                    log_s.append(len(all_payload))
                     time.sleep(1)
                 except BrokenPipeError:
                     print("Broken pipe: Client is no longer connected. Closing socket.")
@@ -177,14 +179,15 @@ class CSALServer():
                     print("Client disconnected.")
                     break  # Exit loop if client disconnects
                 if data:
-                    print(len(data))
+                    #print(len(data))
                     self.insert_row_server('users', data, count)
                     t1 = time.time()
                     log_e.append(len(data))
                     #break
                 count+=1   
-
-                tlog.append(t1-t0-1)
+                end_time = time.process_time()
+                tlog.append(end_time - start_time)
+               
 
         except ConnectionResetError:
             print("CSAL login completed")
@@ -302,8 +305,8 @@ def run_login_experiments(srv, iter):
             srv.client_socket.close()
         if srv.server_socket != None:
             srv.server_socket.close()
-        #os.system(f'rm {srv.db_name}')
-        #os.system(f'rm encryptor2.db')
+        os.system(f'rm {srv.db_name}')
+        os.system(f'rm encryptor2.db')
         print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
         print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
         print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")
@@ -324,19 +327,12 @@ def run_login_experiments_no_smuggle(srv, iter):
             srv.client_socket.close()
         if srv.server_socket != None:
             srv.server_socket.close()
-        #os.system(f'rm {srv.db_name}')
-        #os.system(f'rm encryptor2.db')
+        os.system(f'rm {srv.db_name}')
+        os.system(f'rm encryptor2.db')
         print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
         print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
         print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")
 
-def run_reenc_experiments(srv, iter):
-    print(3)
-    pass
-
-def run_action_experiments(srv, iter):
-    print(4)
-    pass
 
 def run_history_experiments(srv, iter):
     times_log = []
@@ -354,8 +350,8 @@ def run_history_experiments(srv, iter):
             srv.client_socket.close()
         if srv.server_socket != None:
             srv.server_socket.close()
-        #os.system(f'rm {srv.db_name}')
-        #os.system(f'rm encryptor2.db')
+        os.system(f'rm {srv.db_name}')
+        os.system(f'rm encryptor2.db')
         print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
         print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
         print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")
@@ -368,18 +364,17 @@ if __name__ == '__main__':
    
     args = parser.parse_args()
     # print(args)
-
+    start_time = time.process_time()
     csal_srv = CSALServer()
 
     if args.experiment == "lns":
         run_login_experiments_no_smuggle(csal_srv, args.iterations)
     elif args.experiment == "ls":
         run_login_experiments(csal_srv, args.iterations)
-    elif args.experiment == "a":
-        run_action_experiments(csal_srv, args.iterations)
-    elif args.experiment == "r":
-        run_reenc_experiments(csal_srv, args.iterations)
     elif args.experiment == "h":
         run_history_experiments(csal_srv, args.iterations)
    
+    end_time = time.process_time()
+    cpu_time = end_time - start_time
+    print(f"CPU time used: {cpu_time} seconds")
 
