@@ -29,3 +29,8 @@ python3 simulator.py -e login-no-smuggle -i n
 ```
 where `experiment_name` can be selected between `login-no-smuggle`, `login-all`, and `history`.
 The measured outputs are shown in the server window.
+
+For the size measurements, run
+`python encryptor_entry_size.py`
+and
+`python algorithms_payload_size.py`
