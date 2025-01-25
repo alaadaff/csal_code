@@ -81,13 +81,13 @@ if __name__ == '__main__':
 
     L=[(i, j, pkbyt_j, kem)]
     T_cert = [[i, chall_i, pkbyt_i, cert_encryptor, sign_i], [j, chall_j, pkbyt_j, cert_encryptor, sign_j]]
-    sigma_reenc = generateSignature(pickle.dumps((i, chall, L, T_cert)))
+    sigma_reenc, _, _ = generateSignature(pickle.dumps((i, chall, L, T_cert)))
 
-    print(f"Server -> client payload: {len(i)+len(chall)+len(L)+sys.getsizeof(T_cert)+len(sigma_reenc)}B.")
+    print(f"Server -> client payload: {len(pickle.dumps((i,chall,L,T_cert)))+sys.getsizeof(sigma_reenc)}B")
     print(f"Client -> encryptor payload is the same as server -> client.")
 
     L_Kem = [(i, j, kem)] # assuming same size for another KEM
-    print(f"Encryptor -> client payload: {sys.getsizeof(L_Kem)}B.")
+    print(f"Encryptor -> client payload: {len(pickle.dumps(L_Kem))}B")
     
     print("\n\nPayload for an action request:")
     print("------------------------------")
@@ -95,14 +95,14 @@ if __name__ == '__main__':
     chall_action = randbytes(16)
     sigma_action, _, _ = generateSignature(pickle.dumps((sid_action, chall_action)))
 
-    print(f"Server -> client payload: {len(sid_action)+len(chall_action)+len(sigma_action)}B.")
+    print(f"Server -> client payload: {len(pickle.dumps((sid_action,chall_action,sigma_action)))}B")
     
-    print(f"Client -> encryptor payload: {len(sid_action)+len(chall_action)+len(sigma_action)+ sys.getsizeof(cl)}B.")
+    print(f"Client -> encryptor payload: {len(pickle.dumps((sid_action,chall_action,sigma_action,cl)))}B")
 
     symmk_action = encryptor2.generate_symmetric()
     f = Fernet(symmk_action)
     cdem = f.encrypt(pickle.dumps([serial, cl]))
 
-    print(f"Encryptor -> client payload: {len(sid_action)+len(cdem)}B.")
+    print(f"Encryptor -> client payload: {len(pickle.dumps((sid_action,cdem)))}B")
 
 

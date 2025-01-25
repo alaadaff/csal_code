@@ -11,7 +11,7 @@ the port is busy and "address is already used". We recommend killing the process
 ## Setup
 To install the dependency packages run:
 ```
-pip instal -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Running experiments
@@ -27,7 +27,7 @@ For `n` iterations on an experiment `experiment_name`, run
 ```
 python3 simulator.py -e login-no-smuggle -i n
 ```
-where `experiment_name` can be selected between `login-no-smuggle`, `login-all`, and `history`.
+where `experiment_name` can be selected among `login-no-smuggle`, `login-all`, and `history`.
 The measured outputs are shown in the server window.
 
 For the size measurements, run
