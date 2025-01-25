@@ -1,12 +1,11 @@
-import random
+import os
 import sqlite3
 import sys
-from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from cryptography.hazmat.backends import default_backend
-
 from random import randbytes
+
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 import encryptor2
 import helpers
@@ -28,8 +27,8 @@ def insert_row_encryptor(db_name, table_name):
         suiteEnc = encryptor2.generate_suite()
         public, private, pk_bytes, sk_bytes = encryptor2.generate_key()
         symmK = encryptor2.generate_symmetric()
-        #encap, sender = suiteEnc.create_sender_context(public)
         encap, sender = suiteEnc.create_sender_context(public)
+        
         # Connect to the SQLite database
         conn = sqlite3.connect(db_name)
         cursor = conn.cursor()
@@ -46,15 +45,13 @@ def insert_row_encryptor(db_name, table_name):
         )
 
         # Prepare the SQL query with placeholders for variables
-        sql = f"INSERT INTO {table_name} (sid, user, relyingParty, publicKeys, encapKeys, secretKeys, signingKeys) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        sql = f"INSERT INTO {table_name} (sid, user, relyingParty, publicKeys, encapKeys, secretKeys, symmetricKeys, signingKeys) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         
         # Execute the query, passing the values as a tuple
         cursor.execute(sql, (sid, user, relyingParty, pk_bytes, encap, sk_bytes, symmK, sigK))
         
         # Commit the transaction
         conn.commit()
-        
-        #print(f"Row inserted into '{table_name}' with sid = {sid}.")
         
     except sqlite3.IntegrityError as e:
         # Handle unique constraint violation or other integrity errors
@@ -66,27 +63,30 @@ def insert_row_encryptor(db_name, table_name):
         # Close the connection to the database
         conn.close()
 
+if __name__ == '__main__':
+    encryptor2.create_db_and_table('encryptor2.db')
+    insert_row_encryptor('encryptor2.db', 'encryptor2')
+    print("here")
 
-#encryptor2.create_db_and_table('encryptor2.db')
-#insert_row_encryptor('encryptor2.db', 'encryptor2')
+    sid = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
+    user = helpers.fetch_data('encryptor2.db', 'encryptor2', 'user')
+    RP = helpers.fetch_data('encryptor2.db', 'encryptor2', 'relyingParty')
+    pk = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
+    encap = helpers.fetch_data('encryptor2.db', 'encryptor2', 'encapKeys')
+    sk = helpers.fetch_data('encryptor2.db', 'encryptor2', 'secretKeys')
+    symmk = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
+    sigk = helpers.fetch_data('encryptor2.db', 'encryptor2', 'signingKeys')
 
-sid = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
-user = helpers.fetch_data('encryptor2.db', 'encryptor2', 'user')
-RP = helpers.fetch_data('encryptor2.db', 'encryptor2', 'relyingParty')
-pk = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
-encap = helpers.fetch_data('encryptor2.db', 'encryptor2', 'encapKeys')
-sk = helpers.fetch_data('encryptor2.db', 'encryptor2', 'secretKeys')
-symmk = helpers.fetch_data('encryptor2.db', 'encryptor2', 'symmetricKeys')
-sigk = helpers.fetch_data('encryptor2.db', 'encryptor2', 'signingKeys')
+    print(f"size of sid: {len(sid[0])}B")
+    print(f"size of username: {sys.getsizeof(user[0])}B")
+    print(f"size of RP: {sys.getsizeof(RP[0])}B")
+    print(f"size of enc_pk: {len(pk[0])}B")
+    print(f"size of encap key: {len(encap[0])}B")
+    print(f"size of enc_sk: {len(sk[0])}B")
+    print(f"size of symmetric key: {len(symmk[0])}B")
+    print(f"size of signing sk: {len(sigk[0])}B")
 
-
-print(len(sid[0]))
-print(sys.getsizeof(user[0]))
-print(sys.getsizeof(RP[0]))
-print(len(pk[0]))
-print(len(encap[0]))
-print(len(sk[0]))
-print(len(symmk[0]))
-print(len(sigk[0]))
+    os.system(f'rm encryptor2.db')
+    
 
 #ls -l encryptor2.db --> size of db 

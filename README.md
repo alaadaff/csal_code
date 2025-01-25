@@ -20,10 +20,10 @@ We support running ent-to-end measurements for:
 - Login with smuggling
 - History retrieval
 
-for iterations between 1 and 20. Additionally, we support size measurements for individual components, enough to analyze the payload of the remaining functions
+for iterations between 1 and 20. Additionally, we support size measurements for individual components, enough to analyze the payload of the remaining functions. 
 
 
-For `n` iterations on an experiment `experiment_name` , run 
+For `n` iterations on an experiment `experiment_name`, run 
 ```
 python3 simulator.py -e login-no-smuggle -i n
 ```
