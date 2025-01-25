@@ -69,7 +69,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Select experiment to run')
     parser.add_argument('--experiment','-e', type=str, nargs=1,
                     help="Select which experiment to run. Select between \
-                            'login-no-smuggle', 'login-all', 'action', 'reenc', and 'history'.")
+                            'login-no-smuggle', 'login-all', and 'history'.")
     parser.add_argument('--iterations','-i', type=int, nargs=1, default=1, 
                         choices=range(1,101), help="Count of how many iterations.")
 
@@ -89,7 +89,7 @@ if __name__ == '__main__':
         run_in_terminal('python client2.py' + f' -e h -i {args.iterations[0]}')
     else:
         print(f"Option {args.experiment[0]} is not valid. \
-              Valid options are: 'login-no-smuggle', 'login-all', 'action', 'reenc', and 'history' (no quotation signs).")
+              Valid options are: 'login-no-smuggle', 'login-all', and 'history' (no quotation signs).")
     
 
 
