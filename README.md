@@ -6,19 +6,26 @@ This is a proof-of-concept and should not be used for production. We used a MacB
 retrieve the device's serial number. This routine will vary among OSes and thus we recommend running the program in a macOS environment.  
 
 We're using TCP sockets for client server communication and thus we're binding to a port. Running the program multiple times repeatedly might present an error that 
-the port is busy and "address is already used". We recommed killing the processes running using: lsof -i :12345 and kill -9 pid
+the port is busy and "address is already used". We recommend killing the processes running using: lsof -i :12345 and kill -9 pid
+
 ## Setup
-TODO
+To install the dependency packages run:
+```
+pip instal -r requirements.txt
+```
 
 ## Running experiments
-We support running measurements for:
+We support running ent-to-end measurements for:
 - Login without smuggling 
+- Login with smuggling
+- History retrieval
 
-and iterations between 1 and 20.
+for iterations between 1 and 20. Additionally, we support size measurements for individual components, enough to analize the payload of the remaining functions
 
 
-For `n` iterations on the `login-no-smuggle` experiment, run 
+For `n` iterations on an experiment `experiment_name` , run 
 ```
 python3 simulator.py -e login-no-smuggle -i n
 ```
+where `experiment_name` can be selected between `login-no-smuggle`, `login-all`, and `history`
 The measured outputs are shown in the server window.

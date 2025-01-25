@@ -112,7 +112,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Select experiment to run')
     parser.add_argument('--experiment','-e', type=str, required=True, help="Experiment to run.")
     parser.add_argument('--iterations','-i', type=int, default=1, 
-                        choices=range(1,101), help="Count of how many iterations.")
+                        choices=range(1,21), help="Count of how many iterations.")
    
     args = parser.parse_args()
 

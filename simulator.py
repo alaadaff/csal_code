@@ -71,7 +71,7 @@ if __name__ == '__main__':
                     help="Select which experiment to run. Select between \
                             'login-no-smuggle', 'login-all', and 'history'.")
     parser.add_argument('--iterations','-i', type=int, nargs=1, default=1, 
-                        choices=range(1,101), help="Count of how many iterations.")
+                        choices=range(1,21), help="Count of how many iterations.")
 
     args = parser.parse_args()
 
