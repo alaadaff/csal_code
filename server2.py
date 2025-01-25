@@ -66,7 +66,7 @@ class CSALServer():
         # Create a table if it doesn't exist
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            uid INTEGER PRIMARY KEY,
+            uid INTEGER,
             user TEXT,
             sid BLOB,
             publicKeys BLOB,
