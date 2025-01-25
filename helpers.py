@@ -56,55 +56,6 @@ def deserialize_rsa_private_key(serialized_private_key):
     return private_key
 
 
-
-"""
-def insert_row_encryptor(db_name, table_name):
-  
-    Insert a row into the specified SQLite table with generated sid and data.
-    
-    Args:
-        db_name (str): The name of the SQLite database file.
-        table_name (str): The name of the table into which data is being inserted.
-   
-    try:
-        # Generate a unique sid (primary key) using UUID
-        sid = str(uuid.uuid4())  # Generate a unique identifier for the sid
-        user = "Bob"
-        relyingParty = "facebook.com"
-        suiteEnc = encryptor2.generate_suite()
-        public, private, pk_bytes, sk_bytes = encryptor2.generate_key()
-        symmK = encryptor2.generate_symmetric()
-        encap, sender = suiteEnc.create_sender_context(public)
-        
-        # Connect to the SQLite database
-        conn = sqlite3.connect(db_name)
-        cursor = conn.cursor()
-
-        # Prepare the SQL query with placeholders for variables
-        sql = f"INSERT INTO {table_name} (sid, user, relyingParty, publicKeys, encapKeys, secretKeys, symmetricKeys) VALUES (?, ?, ?, ?, ?, ?, ?)"
-        
-        # Execute the query, passing the values as a tuple
-        cursor.execute(sql, (sid, user, relyingParty, pk_bytes, encap, sk_bytes, symmK))
-        
-        # Commit the transaction
-        conn.commit()
-        
-        print(f"Row inserted into '{table_name}' with sid = {sid}.")
-        
-    except sqlite3.IntegrityError as e:
-        # Handle unique constraint violation or other integrity errors
-        print(f"IntegrityError: {e}")
-    except sqlite3.Error as e:
-        # Catch any other SQLite errors
-        print(f"SQLite Error: {e}")
-    finally:
-        # Close the connection to the database
-        conn.close()
-
-
-    #insert_row_encryptor('encryptor2.db', 'encryptor2')
- """
-
 def insert_into_single_column(db_name, table_name, column_name, values):
     """
     Inserts values into a single column of the specified table in the SQLite database.
@@ -309,35 +260,6 @@ def fetch_data_order(db_name, table_name, column_name, order_column):
     return column_data
 
 
-def main():
-
-    #cert, sk, pk = generate_random_certificate()
-    #print(len(pk))
-    #print(len(cert))
-    connection = sqlite3.connect('server.db')
-
-    # Create a cursor object to interact with the database
-    cursor = connection.cursor()
-
-    # SQL query to fetch all data from a table (replace 'your_table' with your actual table name)
-    query = "SELECT * FROM your_table;"
-
-    # Execute the query
-    cursor.execute(query)
-
-    # Fetch all the rows from the result of the query
-    rows = cursor.fetchall()
-
-    # Iterate over the rows and print each row
-    for row in rows:
-        print(row)
-        print(type(row))
-        print(len(row))
-
-    # Close the cursor and connection
-    cursor.close()
-    connection.close()
-
 
 def fetch_row_by_primary_key(db_path, table_name, primary_key_column, key_value):
     try:
@@ -427,7 +349,7 @@ def update_row(db_path, table_name, primary_key_column, key_value, update_data):
 
         # Check if the update was successful
         if cursor.rowcount == 0:
-            print(f"No record found with {primary_key_column} = {key_value}")
+            #print(f"No record found with {primary_key_column} = {key_value}")
             return False
         else:
             #print(f"Record updated successfully where {primary_key_column} = {key_value}")
@@ -485,7 +407,7 @@ def append_value_as_blob(db_path, table_name, column_name, append_value, pk_colu
 
         # Check if any row was updated
         if cursor.rowcount > 0:
-            print(f"Successfully updated row with {pk_column} = {pk_value}.")
+            #print(f"Successfully updated row with {pk_column} = {pk_value}.")
             return True
         else:
             print(f"No record found with {pk_column} = {pk_value}.")
@@ -572,7 +494,7 @@ def insert_row(db_path, table_name, column_names, values):
         conn.commit()
         conn.close()
 
-        print("Row inserted successfully.")
+        #print("Row inserted successfully.")
         return True
 
     except sqlite3.Error as e:
@@ -580,7 +502,41 @@ def insert_row(db_path, table_name, column_names, values):
         return False
 
 
-if __name__ == '__main__':
-   
-    main()    
+def fetch_rows_as_list(db_path, table_name, column_name, column_value):
+    """
+    Retrieves all rows from a database table where the specified column matches a given value.
+
+    Args:
+        db_path (str): Path to the SQLite database file.
+        table_name (str): Name of the table.
+        column_name (str): Column to filter by.
+        column_value (any): Value to search for.
+
+    Returns:
+        list: A list of lists representing the retrieved rows.
+    """
+    try:
+        # Connect to SQLite database
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # SQL query to select rows where the column matches the specified value
+        query = f"SELECT * FROM {table_name} WHERE {column_name} = ?"
+
+        # Execute the query with the provided value
+        cursor.execute(query, (column_value,))
+        
+        # Fetch all matching rows and convert tuples to lists
+        rows = cursor.fetchall()
+        row_list = [list(row) for row in rows]
+
+        # Close the connection
+        conn.close()
+
+        return row_list
+
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+        return []
+
 

@@ -10,8 +10,6 @@ from subprocess import PIPE, Popen
 
 def forward_to_subprocess(serv_bytes, action):
 
-    #serv_params = server2.server_params()
-    #serv_bytes = pickle.dumps(serv_params)
 
     # Start the subprocess (encryptor2.py)
     process = subprocess.Popen(
@@ -23,26 +21,12 @@ def forward_to_subprocess(serv_bytes, action):
         text=False  # Handle data as bytes, not strings
     )
 
-    # Send a byte message to receiver.py
-    #message = b'Hello from sender.py!'  # Send the message as bytes
-    #print(f"Sending: {message.decode('utf-8')}")  # Optionally print the message in a human-readable form
-
     # Use communicate() to send and receive data
     stdout, stderr = process.communicate(input=serv_bytes)  # Automatically flushes stdin and reads stdout
 
     if stdout:
         print("Subprocess Output:\n", stdout)
 
-    """
-    # Print the received response (stdout)
-    if stdout:
-        #print(f"Received: {stdout.decode('utf-8')}")
-        print("Received from encryptor")
-        print(stdout)
-        print(type(stdout))
-        #print(f"Received: {stdout}")
-    # Print any error messages (if any)
-    """
     if stderr:
         print(f"Error: {stderr.decode('utf-8')}")
 
@@ -60,7 +44,7 @@ class CSALClient():
         self.client_socket.connect(('localhost', 12345))  # Connect to the server
 
     def client_run_login(self, iter=1, smuggle=False):
-        loginf = 'lns'
+        loginf = 'h'
         if smuggle:
             loginf = 'ls'
         i = 0    
@@ -68,7 +52,7 @@ class CSALClient():
             while True and i<iter:
                 
                 # Receive data from the server
-                data = self.client_socket.recv(8192)
+                data = self.client_socket.recv(262144)
                 cl = b'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0'
                 data_cl = [data, cl]
                 data_encryptor = pickle.dumps(data_cl)
@@ -76,8 +60,7 @@ class CSALClient():
                     message = forward_to_subprocess(data_encryptor, loginf)
                     self.client_socket.sendall(message)
                     print("Login completed")
-                    #self.sid += 1 
-                    #break
+                    
     
                 i+=1
         except KeyboardInterrupt:
@@ -87,50 +70,6 @@ class CSALClient():
 
 
 
-"""
-
-def forward_to_subprocess():
-
-    
-    process = subprocess.Popen(
-    ['python3', 'encryptor2.py'],
-    stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    #bufsize=1,  # Line-buffered for better interaction
-    text=True    # Enable text mode for easier string handling
-    )
-
-    # Give the receiver some time to start
-    time.sleep(1)
-
-    # Send a byte message to receiver.py
-    message = "Hello from sender.py!"
-    print(f"Sending: {message}")
-
-    # Write message to stdin (which receiver.py reads)
-    process.stdin.write(message)  # We add a newline for proper line handling
-    process.stdin.flush()
-    print("Flushed stdin")
-
-    # Read response from stdout (which receiver.py writes)
-    response = process.stdout.read()
-    print(f"Received: {response}")
-    #print(f"Received: {response.strip()}")
-    #print(response.decode('utf-8'))
-
-    error_message = process.stderr.read()
-    if error_message:
-        print(f"Error: {error_message.decode('utf-8')}")
-
-    # Close the process
-    process.stdin.close()
-    process.stdout.close()
-    process.stderr.close()
-
-    process.wait()
-
-"""   
 
 def run_login_experiments(cl, iter):
     try:
@@ -188,25 +127,12 @@ if __name__ == '__main__':
     elif args.experiment == "h":
         run_history_experiments(csal_cl, args.iterations)
 
-    # start_client()
-    
+
     end_time = time.process_time()
     #simulator.run_in_terminal('python3 encryptor2.py')
     cpu_time = end_time - start_time
     print(f"CPU time used: {cpu_time} seconds")
-    #serv_params = server2.server_params()
-    #serv_bytes = pickle.dumps(serv_params)
-    #print(serv_bytes)
-    #message = b'Hello from sender.py!'
     
-    #forward_to_subprocess()
-    #print(res)
-    #print(type(res))
-    
-    #print(resp)
-
-    #print(serv_bytes)
-    #print(pickle.loads(serv_bytes))
 
 
 

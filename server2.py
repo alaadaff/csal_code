@@ -92,8 +92,7 @@ class CSALServer():
         userid = random.randint(1, 9999)
         data = pickle.loads(pickled_data)
         if len(data) == 10:
-            print("here 10")
-            user = "Alice"
+            user = "Bob"
             sid = data[0][i]
             publicK = data[1][i]
             #ckem = data[2][0]
@@ -102,8 +101,7 @@ class CSALServer():
             cdem = data[3][0]
             cold = data[4]
         elif len(data) == 9:
-            print("here 9")
-            user = "Alice"
+            user = "Bob"
             sid = data[0][i]
             publicK = data[1][i]
             #ckem = data[2][0]
@@ -155,20 +153,15 @@ class CSALServer():
 
         return server_payload
 
-    def server_run_login(self, tlog, log_s, log_e, smuggle=False):
+    def server_run_login(self, tlog, log_s, log_e, smuggle=True):
         # Create params for a new session [N, cookie_tmp, params, PKs, certRP, sigma]
         t0 = time.time()
-        #blob = self.server_params_login()
-        #servPayload, sigma = generate_signature(self.certificate, self.cert_sk, blob)
-        #all_payload = pickle.dumps([servPayload, sigma]) 
-        #log_s.append(len(all_payload))
       
         try:
 
             #self.client_socket.sendall(all_payload)
             count=0
             while True:
-                #send = b'sending...'
                 try:
                     blob = self.server_params_login()
                     servPayload, sigma = generate_signature(self.certificate, self.cert_sk, blob)
@@ -177,14 +170,14 @@ class CSALServer():
                     time.sleep(1)
                 except BrokenPipeError:
                     print("Broken pipe: Client is no longer connected. Closing socket.")
-                    break
+                    #break
                    
-                data = self.client_socket.recv(8192)
+                data = self.client_socket.recv(262144)
                 if not data:
                     print("Client disconnected.")
                     break  # Exit loop if client disconnects
                 if data:
-                    dat = pickle.loads(data)
+                    print(len(data))
                     self.insert_row_server('users', data, count)
                     t1 = time.time()
                     log_e.append(len(data))
@@ -271,13 +264,6 @@ def generate_random_certificate():
     #return cert_pem.decode('utf-8'), private_key
     return cert_pem, private_key
 
-def parse_data(pickled_data):
-
-    data = pickle.loads(pickled_data)
-
-
-    pass
-
 def generate_signature(cert, sk, blob):
     if cert == None or sk == None:
         raise  Exception("No certificate or secret key")
@@ -296,50 +282,9 @@ def generate_signature(cert, sk, blob):
          hashes.SHA256()
     )
 
-    
-    #blob_bytes = bytearray()
-    #blob_bytes.extend(signature)
-    #blob_bytes.extend(blob)
-    
 
     return blob, signature
-
-#def main():
-    #parser = argparse.ArgumentParser()
-    #parser.add_argument('message', type=str, help='Message to send to the client')
-    #args = parser.parse_args()
-#    srv = CSALServer() 
-#    srv.start_server()
    
-    """
-    #start_server()
-    connection = sqlite3.connect('server.db')
-
-    # Create a cursor object to interact with the database
-    cursor = connection.cursor()
-
-    # SQL query to fetch all data from a table (replace 'your_table' with your actual table name)
-    query = "SELECT * FROM users;"
-
-    # Execute the query
-    cursor.execute(query)
-
-    # Fetch all the rows from the result of the query
-    rows = cursor.fetchall()
-
-    # Iterate over the rows and print each row
-    for row in rows:
-        for i in range(2, 6):
-            print(row[i])
-            #print(sys.getsizeof(row[i]))
-            print(len(row[i]))
-
-    # Close the cursor and connection
-    cursor.close()
-    connection.close()
-
-    """
-    #sqlite3.connect('server.db').execute("INSERT INTO server (publicKeys) VALUES (?)", ('\x04e\xed\xa5\xa1%w\xc2\xba\xe8)C\x7f\xe38p\x1a',)).connection.commit()
 
 def run_login_experiments(srv, iter):
     times_log = []
@@ -409,8 +354,8 @@ def run_history_experiments(srv, iter):
             srv.client_socket.close()
         if srv.server_socket != None:
             srv.server_socket.close()
-        os.system(f'rm {srv.db_name}')
-        os.system(f'rm encryptor2.db')
+        #os.system(f'rm {srv.db_name}')
+        #os.system(f'rm encryptor2.db')
         print(f"Size of bundle from the server to the client for 1 through {iter} sessions:\n {server_sizes_log}")
         print(f"Size of bundle from the client to the server for 1 through {iter} sessions:\n {encryptor_sizes_log}")
         print(f"Computation time at for 1 through {iter} sessions (seconds):\n {times_log}")
@@ -437,8 +382,4 @@ if __name__ == '__main__':
     elif args.experiment == "h":
         run_history_experiments(csal_srv, args.iterations)
    
-#    main()
-
-    #start_server()
-    #create_db_and_table('server.db')
 
