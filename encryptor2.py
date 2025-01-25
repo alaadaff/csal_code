@@ -238,7 +238,7 @@ def process_data_client_retrieval():
 
     sys.stdin.flush()  # flush stdin after reading in input 
     
-    response = process_data_encryptor_encrypt(challenge_server, pks, tkems, session_id) #FIXME
+    response = process_data_encryptor_encrypt(challenge_server, pks, tkems, session_id)
     
   
     
@@ -388,7 +388,7 @@ def encrypt_csal(sid, publicKeys=[], session=[]):
    
 
     if len(publicKeys) == 0 and len(session)== 0: #first csal login
-        print("This is the first CSAL login!")
+        # print("This is the first CSAL login!")
         fetch1 = helpers.fetch_data('encryptor2.db', 'encryptor2', 'publicKeys')
         #fetch_sid = helpers.fetch_data('encryptor2.db', 'encryptor2', 'sid')
         public = enc_suite.kem.deserialize_public_key(fetch1[0])
@@ -475,8 +475,8 @@ def decrypt_csal(kms=[], dms=[], sess=[]):
                     log.append(ptx_dem)
                     kem_old.append(ptx_kem)
                 except:
-                    #pass
-                    print("Not decrypted")
+                    pass
+                    # print("Not decrypted")
                 
 
                 #log.append(ptx_dem)
@@ -491,7 +491,7 @@ def decrypt_csal_smuggling(sid_curr, kms=[], sess=[]):
 
     dec_suite = generate_suite()
     number_keys = len(sess)
-    print("Here, is the decrypt func running?")
+    # print("Here, is the decrypt func running?")
     for i in range(number_keys):
         #encap_key_fetch = helpers.fetch_row_by_primary_key('encryptor2.db', 'encryptor2', 'sid', sess[i])
         #encap_key = encap_key_fetch[4]

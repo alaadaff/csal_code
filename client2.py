@@ -55,12 +55,13 @@ class CSALClient():
         loginf = 'lns'
         if smuggle:
             loginf = 'ls'
-        elif history:
-            loginf = 'h'
+        # elif history:
+        #     loginf = 'h'
         i = 0    
         try:
             while True and i<iter:
-                
+                if i==iter-1 and history:
+                    loginf = 'h'
                 # Receive data from the server
                 data = self.client_socket.recv(262144)
                 cl = b'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0'
