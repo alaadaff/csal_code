@@ -163,6 +163,11 @@ def process_data_client_login():
     if byte_message:
 
         try:
+            challenge_server = None
+            pks = None
+            tkems = None
+            session_id = None
+            tdems = None
             unpickle = pickle.loads(byte_message)
             serv_payld = unpickle[0]
             cl = unpickle[1]
@@ -184,7 +189,8 @@ def process_data_client_login():
 
         except pickle.UnpicklingError as e:
             print("Error unpickling data:", e, flush=True)
-
+        except UnboundLocalError:
+            challenge_server = randbytes(16)
     
 
     sys.stdin.flush()  # flush stdin after reading in input 
@@ -213,6 +219,11 @@ def process_data_client_retrieval():
     if byte_message:
 
         try:
+            challenge_server = None
+            pks = None
+            tkems = None
+            session_id = None
+            tdems = None
             #print("Payload size", len(byte_message))
             unpickle = pickle.loads(byte_message)
             serv_payld = unpickle[0]
@@ -235,6 +246,8 @@ def process_data_client_retrieval():
 
         except pickle.UnpicklingError as e:
             print("Error unpickling data:", e, flush=True)
+        except UnboundLocalError:
+            challenge_server = randbytes(16)
 
     sys.stdin.flush()  # flush stdin after reading in input 
     
@@ -263,6 +276,11 @@ def process_data_client_smuggling():
     if byte_message:
 
         try:
+            challenge_server = None
+            pks = None
+            tkems = None
+            session_id = None
+            tdems = None
             #print("Payload size", len(byte_message))
             unpickle = pickle.loads(byte_message)
             serv_payld = unpickle[0]
@@ -285,6 +303,8 @@ def process_data_client_smuggling():
            
         except pickle.UnpicklingError as e:
             print("Error unpickling data:", e, flush=True)
+        except UnboundLocalError:
+            challenge_server = randbytes(16)
 
     sys.stdin.flush()  # flush stdin after reading in input 
    
@@ -453,9 +473,12 @@ def decrypt_csal(kms=[], dms=[], sess=[]):
     log = []
     kem_old = []
     dec_suite = generate_suite()
-    number_keys = len(sess)
+    try:
+        number_keys = len(sess)
+    except:
+        pass
     
-
+    
     for i in range(number_keys):
         Kems = pickle.loads(kms[i])
         symK = helpers.fetch_value_by_primary_key('encryptor2.db', 'encryptor2', 'symmetricKeys', 'sid', sess[i])

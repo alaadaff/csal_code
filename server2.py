@@ -174,7 +174,7 @@ class CSALServer():
                     print("Broken pipe: Client is no longer connected. Closing socket.")
                     #break
                    
-                data = self.client_socket.recv(262144)
+                data = self.client_socket.recv(2097152)
                 if not data:
                     print("Client disconnected.")
                     break  # Exit loop if client disconnects

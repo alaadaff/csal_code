@@ -63,7 +63,7 @@ class CSALClient():
                 if i==iter-1 and history:
                     loginf = 'h'
                 # Receive data from the server
-                data = self.client_socket.recv(262144)
+                data = self.client_socket.recv(2097152)
                 cl = b'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Edg/120.0.100.0'
                 data_cl = [data, cl]
                 data_encryptor = pickle.dumps(data_cl)
