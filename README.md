@@ -15,7 +15,7 @@ pip install -r requirements.txt
 ```
 
 ## Running experiments
-We support running ent-to-end measurements for:
+We support running end-to-end measurements for:
 - Login without smuggling 
 - Login with smuggling
 - History retrieval
