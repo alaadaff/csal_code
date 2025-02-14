@@ -168,7 +168,7 @@ class CSALServer():
                     servPayload, sigma = generate_signature(self.certificate, self.cert_sk, blob)
                     all_payload = pickle.dumps([servPayload, sigma]) 
                     self.client_socket.sendall(all_payload)
-                    log_s.append(len(all_payload))
+                    #log_s.append(len(all_payload))
                     time.sleep(1)
                 except BrokenPipeError:
                     print("Broken pipe: Client is no longer connected. Closing socket.")
@@ -179,6 +179,7 @@ class CSALServer():
                     print("Client disconnected.")
                     break  # Exit loop if client disconnects
                 if data:
+                    log_s.append(len(all_payload))
                     #print(len(data))
                     self.insert_row_server('users', data, count)
                     t1 = time.time()
