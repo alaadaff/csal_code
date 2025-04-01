@@ -54,7 +54,7 @@ def run_in_terminal(command):
         # For macOS (using AppleScript to open Terminal)
         script = f'''
         tell application "Terminal"
-            do script "cd {current_dir} && {command}"
+            do script "cd {current_dir} && source ~/py_envs/bin/activate && {command}"
         end tell
         '''
         subprocess.Popen(['osascript', '-e', script])

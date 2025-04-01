@@ -1,2 +1,2 @@
-cryptography==44.0.0
-pyhpke==0.6.1
+cryptography==42.0.5
+pyhpke==0.5.3
