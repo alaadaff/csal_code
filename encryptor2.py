@@ -486,6 +486,7 @@ def decrypt_csal(kms=[], dms=[], sess=[]):
         encp = helpers.fetch_value_by_primary_key('encryptor2.db', 'encryptor2', 'encapKeys', 'sid', sess[i])
         all_rows = helpers.fetch_rows_as_list('encryptor2.db', 'encryptor2', 'sid', sess[i])
         #if len(Kems) > 1:
+        sizee = 0
         for j in range(len(all_rows)):
             for k in range(len(Kems)):
                 #token = Fernet(all_rows[j][6])
@@ -495,6 +496,7 @@ def decrypt_csal(kms=[], dms=[], sess=[]):
                     ptx_kem = recipient.open(Kems[k])
                     token = Fernet(ptx_kem)
                     ptx_dem = token.decrypt(dms[i])
+                    sizee += len(ptx_dem)
                     log.append(ptx_dem)
                     kem_old.append(ptx_kem)
                 except:
@@ -503,7 +505,7 @@ def decrypt_csal(kms=[], dms=[], sess=[]):
                 
 
                 #log.append(ptx_dem)
-           
+    print(sizee)
 
     return log, kem_old
 
@@ -637,10 +639,13 @@ def run_history_experiments():
     create_db_and_table('encryptor2.db')
     #insert_row_encryptor('encryptor2.db', 'encryptor2')
     kem, dem, sess = process_data_client_retrieval()
-    lg = decrypt_csal(kem, dem, sess)
+    lg, oldd = decrypt_csal(kem, dem, sess)
     size_of_log = len(lg)
     for i in range(size_of_log):
         print("Entry ", i, ":", lg[i])
+        print(len(lg[i]))
+
+          
     
 
 

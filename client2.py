@@ -25,9 +25,9 @@ def forward_to_subprocess(serv_bytes, action):
     stdout, stderr = process.communicate(input=serv_bytes)  # Automatically flushes stdin and reads stdout
 
     if stdout and action == 'h':
-        #print("Subprocess Output:\n", stdout)
-        truncated_output = stdout[-1000:]  # Get last 500 bytes
-        print("Last 1000 bytes of subprocess output:\n", truncated_output)
+        print("Subprocess Output:\n", stdout)
+        #truncated_output = stdout[-1000:]  # Get last 500 bytes
+        #print("Last 1000 bytes of subprocess output:\n", truncated_output)
         #pass
 
     #To print the entire encryptor output 

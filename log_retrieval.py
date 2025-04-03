@@ -1,5 +1,6 @@
 import server2
 import encryptor2
+import helpers
 from random import randbytes
 import pickle
 from cryptography.fernet import Fernet
@@ -75,7 +76,7 @@ srv = randbytes(16)
 sid = randbytes(16)
 chall = randbytes(16)
 sigma = randbytes(256)
-cert_pk, priv = server2.generate_random_certificate()
+cert_pk, priv = helpers.generate_random_certificate()
 symmk = encryptor2.generate_symmetric()
 f = Fernet(symmk)
 C_old = f.encrypt(symmk)
@@ -127,7 +128,7 @@ def sign_verify(pk, signature, message):
 
 
 
-############
+############ start here #######
 
 #sign, pem, pk_sign = generateSignature(ckem)
 pk1, sk1, pk_bytes1, sk_bytes1 = encryptor2.generate_key()
